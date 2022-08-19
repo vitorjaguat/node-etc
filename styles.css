@@ -1,0 +1,47 @@
+* {
+    font-family: Optima, Times, 'Times New Roman', serif;
+}
+
+
+.red {
+    font-size: 0.7rem;
+    color: red;
+}
+
+pre code {
+    background-color: #eee;
+    border: 1px solid #999;
+    display: inline-block;
+    padding: 2%;
+    max-width: 90%;
+    width: fit-content;
+    /* line-break: loose; */
+    /* overflow: scroll; */
+    white-space: pre-wrap;
+}
+
+
+h1 {
+    text-align: center;
+    margin: 2rem;
+}
+
+
+h2,
+h3,
+h4,
+h5,
+h6 {
+    margin: 0.5rem;
+}
+
+h2 {
+    font-weight: 900;
+    padding-bottom: 1rem;
+    padding-top: 2rem;
+}
+
+.alert-info {
+    padding: 2rem;
+    max-width: 60%;
+}
