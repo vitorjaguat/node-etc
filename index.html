@@ -11,8 +11,56 @@
 
 <body>
     <h1>Node etc.</h1>
-
+    <p>Node.js is an open-source, cross-platform, back-end JavaScript runtime environment that runs on a JavaScript
+        Engine (i.e. V8 engine) and executes JavaScript code outside a web browser, which was designed to build scalable
+        network applications. Node.js lets developers use JavaScript to write command line tools and for server-side
+        scripting—running scripts server-side to produce dynamic web page content before the page is sent to the user's
+        web browser. Consequently, Node.js represents a "JavaScript everywhere" paradigm,[6] unifying web-application
+        development around a single programming language, rather than different languages for server-side and
+        client-side scripts.</p>
 </body>
+<h3>Running .js files using Node</h3>
+<p>On the terminal:</p>
+<pre><code>
+    node firstScript.js
+    <span class="red">the JS file will run inside the terminal</span>
+</code></pre>
+<h3>Process</h3>
+<p>The process object is a global that provides information about, and control over, the current Node.js process. As a
+    global, it is always available to Node.js applications without using require().</p>
+<p>We can compare process to the window object on a browser.</p>
+<h3>process.argv</h3>
+<p>The process.argv property returns an array containing the command line arguments passed when the Node.js process was
+    launched. The first element will be process.execPath. The process.execPath property returns the absolute pathname of
+    the executable that started the Node.js process: usually '/usr/local/bin/node'. The second element will be the path
+    to the JavaScript file being executed. The remaining elements will be any additional command line arguments.</p>
+<pre><code>
+    node firstScript.js puppies chickens hello
+    <span class="red">these 3 strings will be added to the argv array.</span>
+</code></pre>
+<p>process.argv returns an array, and can be accessed from the js file.</p>
+
+<h3>File System Module (fs)</h3>
+<p>The fs module enables interacting with the file system. </p>
+<p>All file system operations have synchronous, callback, and promise-based forms.</p>
+<p>Unlike the process object, the fs module must be required before being used in the script.</p>
+<p>Example: creating a script that creates boilerplates files (index.html, style.css, app.js) for a new project.</p>
+<pre><code>
+on script:
+const fs = require('fs'); <span class="red">requires fs module</span>
+const folderName = process.argv[2] || 'Project'; <span class="red">accesses the argument that was provided by the user</span>
+fs.mkdirSync(folderName); <span class="red">creates a folder with the name provided by the user</span>
+fs.writeFileSync(`${folderName}/index.html`)
+fs.writeFileSync(`${folderName}/style.css`)
+fs.writeFileSync(`${folderName}/app.js`)
+<span class="red">creates these 3 files inside that folder</span>
+
+on the command line:
+node boilerplate.js Portfolio
+<span class="red">creates a folder called Portfolio with those 3 files inside of it.</span>
+</code></pre>
+
+
 
 
 
