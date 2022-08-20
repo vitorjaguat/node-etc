@@ -50,15 +50,81 @@ on script:
 const fs = require('fs'); <span class="red">requires fs module</span>
 const folderName = process.argv[2] || 'Project'; <span class="red">accesses the argument that was provided by the user</span>
 fs.mkdirSync(folderName); <span class="red">creates a folder with the name provided by the user</span>
-fs.writeFileSync(`${folderName}/index.html`)
-fs.writeFileSync(`${folderName}/style.css`)
-fs.writeFileSync(`${folderName}/app.js`)
-<span class="red">creates these 3 files inside that folder</span>
+fs.writeFileSync(`${folderName}/index.html`, '');
+fs.writeFileSync(`${folderName}/style.css`, '');
+fs.writeFileSync(`${folderName}/app.js`, '')
+<span class="red">creates these 3 files inside that folder. The second argument is the content of that file and can be set to empty.</span>
 
+async version:
+fs.mkdir(`${folderName}`, { recursive: true }, (err) => {
+    console.log('The folder is successfully created')
+    if (err) console.log(err);
+ })
+fs.writeFile(`${folderName}/index.html`, 'I am the new file\'s content', (err) => {
+    console.log('The HTML file is successfully created')
+    if (err) console.log(err)
+ });
+ fs.writeFile(`${folderName}/style.css`, 'I am the new file\'s content', (err) => {
+    console.log('The CSS file is successfully created')
+    if (err) console.log(err)
+ });
+ fs.writeFile(`${folderName}/app.js`, 'I am the new file\'s content', (err) => {
+    console.log('The JS file is successfully created')
+    if (err) console.log(err)
+ });
+ 
 on the command line:
 node boilerplate.js Portfolio
 <span class="red">creates a folder called Portfolio with those 3 files inside of it.</span>
 </code></pre>
+
+<h3>Exporting modules using module.export</h3>
+<p>In order to create our own modules, the first thing to do is to put the value inside of module.exports object in the
+    module's file.</p>
+<p>Then we have to require the module using require('./moduleName') inside the file where we want to use it.</p>
+<pre><code>
+    on the module:
+    module.exports.sum = (x,y) => x + y;
+    exports.sum = (x,y) => x + y;
+    <span class="red">exports is a shortcut for module.exports</span>
+
+    on the script using the model:
+    require('./math');
+    <span class="red">assuming that the module's file is called math.js</span>
+</code></pre>
+
+<h3>Requiring a directory</h3>
+<p>When requiring an entire folder, node.js will look into index.js, which should be inside that folder.</p>
+<p>A common pattern is to require all values into index.js and then export them all from there.</p>
+
+<h2>NPM</h2>
+<p>NPM is the largest library of packages, which are modules written by other people, all ready for anyone to use.</p>
+<p>NPM is also a command line tool to easily install and manage those packages in our Node projects.</p>
+
+<h3>Installing packages from NPM</h3>
+<p>To install a package from NPM, the basic command is: npm install packageName . This command has a shortcut: npm i
+    packageName .</p>
+<p>The correct packageName can be found in the package's documentation on NPM website.</p>
+<p>To globally install a package, just add -g</p>
+<pre><code>
+    npm i packageName -g 
+</code></pre>
+<p>The global installation will install the package on the root of the computer, so that every project that requires
+    that package will have it available. If the global installation fails, use this line to change permission:</p>
+<pre><code>
+sudo chown -R $USER/usr/local/lib/node_modules
+</code></pre>
+
+<h3>The <i>package.json</i> file</h3>
+<p>Before installing any package to a projects folder, we have to run <b>npm init</b>. This will create a package.json
+    file in the root of that project. This file contains metadata of the packages used by that project. Everytime we
+    install a new package on that folder, this file will automatically update the <b>dependencies</b> property.</p>
+
+<h3>Installing all dependencies for a project</h3>
+<p>When uploading a project to GIThub, we don't need to upload the node_modules folder. All we have to do is to upload
+    the <i>package.json</i> file. Then, the people who download the project code, will run the command line <i>npm
+        install</i> in that folder, and that it! All the dependencies listed on the packages.json file will be
+    automatically downloaded for that folder.</p>
 
 
 
