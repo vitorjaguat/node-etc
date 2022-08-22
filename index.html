@@ -124,7 +124,116 @@ sudo chown -R $USER/usr/local/lib/node_modules
 <p>When uploading a project to GIThub, we don't need to upload the node_modules folder. All we have to do is to upload
     the <i>package.json</i> file. Then, the people who download the project code, will run the command line <i>npm
         install</i> in that folder, and that it! All the dependencies listed on the packages.json file will be
-    automatically downloaded for that folder.</p>
+    automatically downloaded for that folder</p>
+
+
+<h2>Express</h2>
+<p>Express.js, or simply Express, is a back end web application framework for Node.js, released as free and open-source
+    software under the MIT License. It is designed for building web applications and APIs.[3] It has been called the de
+    facto standard server framework for Node.js.</p>
+
+<h3>Starting a server</h3>
+<pre><code>
+    const express = require('express');
+    const app = express();
+
+app.use(() => {
+    console.log('WE GOT A NEW REQUEST!');
+    res.send('Hello, this is a response'); 
+    <span class="red">the send method is what is sent as a response to the browser; it accepts strings, objects (which will be converted to json) and html.</span>
+})
+<span class="red">app.use is what happens when the request is received</span>
+
+app.listen(8080, () => {
+    console.log("LISTENING ON PORT 8080")
+})
+<span class="red">this sets the port on localhost where the requests are being listened; to access the server, go to localhost:8080 on any browser (on your machine)</span>
+</code></pre>
+
+<h3>Express routing basics</h3>
+<p>Until now, it doesn't matter if the user is requesting the '/' page or the '/cats' page, with app.use the server will
+    always send the same response.</p>
+<p>Using app.get, we are able to get the exact request, and respond according to what comes after the /.</p>
+<pre><code>
+    const express = require('express');
+    const app = express();
+
+    app.get('/', (req, res) => {
+        res.send('This is the home page!');
+    });
+
+    app.get('/cats', (req, res) => {
+        res.send('MEOW!');
+    });
+
+    app.get('/dogs', (req, res) => {
+        res.send('WOOF!');
+    });
+
+    app.listen(8080, () => {
+        console.log("LISTENING ON PORT 8080")
+    })
+</code></pre>
+<p>Besides 'get', there are other http verbs, like, 'post', 'put', 'delete', etc. Express will differentiate incoming
+    request of different types.</p>
+<pre><code>
+    app.post('/cats', (req, res) => {
+        res.send('POST REQUEST TO /cats!!! This is a response!')
+    })
+</code></pre>
+<p>To respond with a customized error page or message to a unexistent request address, (ex: '/hdhebdhbwh'):</p>
+<pre><code>
+    app.get('*', (req, res) => {
+        res.send(`I don't know that path!`);
+    });
+</code></pre>
+
+<h3>Routing path parameters</h3>
+<p>In order to designate a pattern in a route, we can use :</p>
+<pre><code>
+    <span class="red">for ex, all Reddit's subreddits begin with the pattern /r/something</span>
+    app.get('/r/:subreddit', (req, res) => {
+        res.send('This is a subreddit!')
+    })
+</code></pre>
+<p><b>req.params</b> is an object that contains one key/value pair for each routed pattern that we defined. The key of
+    that property will be the word that we wrote after
+    the colon(:), the value of that property will be the actual word requested by the user.</p>
+<pre><code>
+    app.get('/r/:subreddit', (req, res) => {
+        { subredditName } = req.params;
+        res.send(`<h1>Browsing the ${subredditName} subreddit!</h1>`)
+    })
+
+    app.get('/r/:subreddit/:postId', (req, res) => {
+        { subredditName, postId } = req.params;
+        res.send(`<h1>Viewing the post called ${postId} on the ${subredditName} subreddit!</h1>`)
+    })
+</code></pre>
+
+<h3>Query strings</h3>
+<p><b>req.query</b> is an object that contains one key/value pair for each query string requested by the user. The key
+    of that property will be the name of the html form in which the query is generated, the value of that property will
+    be the actual word requested by the user.</p>
+<pre><code>
+    app.get('search', (req, res) => {
+        const { q } = req.query;
+        res.send(`<h1>Search results for ${q}</h1>`)
+    });
+</code></pre>
+
+<h3>Auto-restart server with Nodemon</h3>
+<p>Nodemon is a NPM package that automatically restarts the server every time we change our code on that project.
+    Otherwise we have to restart the server so that the changes take place.</p>
+
+
+<h3>Templating</h3>
+<p>Templating allows us to define a preset "pattern" for a webpage, that we can dynamically modify.</p>
+<p>For example, we could define a single "Search" template that displays all the results for a given search term. We
+    don't know what the term is or how many results there are ahead of time. The webpage id created on the fly.</p>
+<p>There are many template languages to do this job, for example, EJS (embedded JS), Handlebars, Jade, Pug, Nunjucks
+    etc.</p>
+
 
 
 
