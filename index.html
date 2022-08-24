@@ -508,9 +508,15 @@ app.listen(3000, () => {
         })
     </code></pre>
         <p>Parsing the request body:</p>
-        <p>Post requests' req object contain an object called <b>req.body</b>.</p>
+        <p>Post requests' req object contain an object called <b>req.body</b>. This object must be parsed by a
+            middleware in Express, so that we can have access to it.</p>
         <pre><code>
+app.use(express.urlencoded({ extended: true }));
+<span class="red">this one will parse req.body that came from an HTML form.</span>
+<span class="red">app.use tells that everytime it is needed, this will be the way to parse these objects.</span>
 
+app.use(express.json());
+<span class="red">this one will parse req.body that came in the JSON format.</span>
     </code></pre>
 
 
