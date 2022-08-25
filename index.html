@@ -411,7 +411,7 @@ app.listen(3000, () => {
             and then <b>include</b> the partial on every single page. It is a convention to create a folder for
             partials.</p>
         <pre><code>
-    <%- include('partials/head') %>
+<%- include('partials/head') %>
 </code></pre>
 
         <h3>Defining RESTful Routes</h3>
@@ -487,26 +487,26 @@ app.listen(3000, () => {
 
         <h4>Handling POST requests</h4>
         <pre><code>
-            <span class="red">on HTML file</span>
-        GET
-        < form action="http://localhost:3000/tacos" method="get">
-            < input type="text" name="meat">
-            < input type="number" name="qty">
-        < /form>
-        POST
-        < form action="http://localhost:3000/tacos" method="post">
-            < input type="text" name="meat">
-            < input type="number" name="qty">
-        < /form>
+<span class="red">on HTML file</span>
+GET
+< form action="http://localhost:3000/tacos" method="get">
+< input type="text" name="meat">
+< input type="number" name="qty">
+< /form>
+POST
+< form action="http://localhost:3000/tacos" method="post">
+< input type="text" name="meat">
+< input type="number" name="qty">
+< /form>
 
-        <span class="red">on the index.js</span>
-        app.get('/tacos', (req, res) => {
-            res.send("GET /tacos response")
-        })
-        app.post('/tacos', (req, res) => {
-            res.send("POST /tacos response")
-        })
-    </code></pre>
+<span class="red">on the index.js</span>
+app.get('/tacos', (req, res) => {
+res.send("GET /tacos response")
+})
+app.post('/tacos', (req, res) => {
+res.send("POST /tacos response")
+})
+</code></pre>
         <p>Parsing the request body:</p>
         <p>Post requests' req object contain an object called <b>req.body</b>. This object must be parsed by a
             middleware in Express, so that we can have access to it.</p>
@@ -517,7 +517,290 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(express.json());
 <span class="red">this one will parse req.body that came in the JSON format.</span>
-    </code></pre>
+</code></pre>
+        <p> What is Middleware? It is those methods/functions/operations that are called BETWEEN processing the Request
+            and sending the Response in your application method.</p>
+
+        <p> When talking about express.json() and express.urlencoded() think specifically about POST requests (i.e. the
+            .post request object) and PUT Requests (i.e. the .put request object)
+        </p>
+        <p>
+            You DO NOT NEED express.json() and express.urlencoded() for GET Requests or DELETE Requests.
+        </p>
+        <p>
+            You NEED express.json() and express.urlencoded() for POST and PUT requests, because in both these requests
+            you are sending data (in the form of some data object) to the server and you are asking the server to accept
+            or store that data (object), which is enclosed in the body (i.e. req.body) of that (POST or PUT) Request
+        </p>
+        <p>
+            Express provides you with middleware to deal with the (incoming) data (object) in the body of the request.
+        </p>
+        <p>
+            a. express.json() is a method inbuilt in express to recognize the incoming Request Object as a JSON Object.
+            This method is called as a middleware in your application using the code: app.use(express.json());
+        </p>
+        <p>
+            b. express.urlencoded() is a method inbuilt in express to recognize the incoming Request Object as strings
+            or arrays. This method is called as a middleware in your application using the code:
+            app.use(express.urlencoded());
+        </p>
+        <p>
+            ALTERNATIVELY, I recommend using body-parser (it is an NPM package) to do the same thing. It is developed by
+            the same peeps who built express and is designed to work with express. body-parser used to be part of
+            express. Think of body-parser specifically for POST Requests (i.e. the .post request object) and/or PUT
+            Requests (i.e. the .put request object).
+        </p>
+        <p>
+            Using body-parser you can do:
+        </p>
+        <pre><code>
+<span class="red">calling body-parser to handle the Request Object from POST requests</span>
+const bodyParser = require('body-parser');
+<span class="red">parse application/json, basically parse incoming Request Object as a JSON Object </span>
+app.use(bodyParser.json());
+<span class="red">parse application/x-www-form-urlencoded, basically can only parse incoming Request Object if strings or arrays</span>
+app.use(bodyParser.urlencoded({ extended: false }));
+<span class="red">combines the 2 above, then you can parse incoming Request Object if object, with nested objects, or generally any type.</span>
+app.use(bodyParser.urlencoded({ extended: true }));
+</code></pre>
+
+        <h4>Into to REST</h4>
+        <p>What is REST? Representational State Transfer. Also called RESTful.</p>
+        <p>REST is an "architectural" style for distributed hypermedia systems. It's basically a set of guidelines for
+            how a client + server should communicate and perform CRUD (Create Read Update Delete.Destroy) operations on
+            a given resource.</p>
+        <p>The main idea of REST is treating data on the server-side as resources that can be CRUDed.</p>
+        <p>The most common way of approaching REST is in formatting the URLs and HTTP verbs in your applications.</p>
+        <p>Architectural pattern:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Path</th>
+                    <th>Verb</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>index</td>
+                    <td>/comments</td>
+                    <td>GET</td>
+                    <td>Display all comments</td>
+                </tr>
+                <tr>
+                    <td>new</td>
+                    <td>/comments/new</td>
+                    <td>GET</td>
+                    <td>Form to create new comment</td>
+                </tr>
+                <tr>
+                    <td>create</td>
+                    <td>/comments</td>
+                    <td>POST</td>
+                    <td>Creates new comment on server</td>
+                </tr>
+                <tr>
+                    <td>show</td>
+                    <td>/comments/:id</td>
+                    <td>GET</td>
+                    <td>Details for one specific comment</td>
+                </tr>
+                <tr>
+                    <td>edit</td>
+                    <td>/comments/:id/edit</td>
+                    <td>GET</td>
+                    <td>Form to edit specific comment</td>
+                </tr>
+                <tr>
+                    <td>update</td>
+                    <td>/comments/:id</td>
+                    <td>PATCH</td>
+                    <td>Updates specific comment on server</td>
+                </tr>
+                <tr>
+                    <td>destroy</td>
+                    <td>/comments/:id</td>
+                    <td>DELETE</td>
+                    <td>Deletes specific item on server</td>
+                </tr>
+            </tbody>
+        </table>
+        <h4>Setting up a REST</h4>
+        <pre><code>
+<span class="red">on index.js</span>
+const express = require('express');
+const app = express();
+const path = require('path');
+
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
+
+const comments = [
+    {
+        id: 1,
+        username: 'Todd',
+        comment: 'lol that is sooo funny'
+    },
+    {
+        id: 2,
+        username: 'Skyler',
+        comment: 'I like to go birdwatching with my dog'
+    },
+    {
+        id: 3,
+        username: 'Sk8erBoi',
+        comment: 'Plz delete your account, Todd'
+    },
+    {
+        id: 4,
+        username: 'onlysayswoof',
+        comment: 'woof woof woof'
+    }
+]
+
+app.get('/comments', (req, res) => {
+    res.render('comments/index', { comments })
+})
+<span class="red">the comments array is being passed through the render function, so that render can "use" the data in this array to create the page</span>
+
+app.get('/tacos', (req, res) => {
+    res.send("GET /tacos response")
+})
+
+app.post('/tacos', (req, res) => {
+    const { meat, qty } = req.body;
+    res.send(`OK, here are your ${qty} ${meat} tacos`)
+})
+
+app.listen(3000, () => {
+    console.log('ON PORT 3000!')
+})
+
+<span class="red">on views/comments/index.ejs</span>
+< h1>Comments< /h1>
+< ul>
+<% for(let c of comments){ %>
+< li><%=c.comment%> - < b><%= c.username%>< /b>< /li>
+<% }%>
+< /ul>
+</code></pre>
+
+        <h4>RESTful comments new</h4>
+        <p>Usually we display (GET) a form for the user to fill, then we submit (POST) the new comment to the server.
+        </p>
+        <pre><code>
+            <span class="red">on index.js</span>
+            app.get('/comments/new', (req, res) => {
+                res.render('comments/new')
+            })
+
+            <span class="red">on new.ejs</span>
+            < h1>Make a new comment< /h1>
+            < form action="/comments" method="post">
+                < section>
+                    < label for="username">Enter username:< /label>
+                    < input type="text" id="username" name="username">
+                < /section>
+                < section>
+                    < label for="comment">Comment text:< /label>
+                    < textarea name="comment" id="comment" cols="30" rows="5">< /textarea>
+                    < /section>
+                < button>Submit< /button>
+            < /form>
+
+            <span class="red">on index.js again</span>
+            app.post('/comments', (req, res) => {
+                <span class="red">deconstruct req.body object:</span>
+                const { username, comment } = req.body;
+                <span class="red">push the new comment as an object to the comments array:</span>
+                comments.push({ username, comment });
+                <span class="red">redirect to the /comments page to see all comments including the new one:</span>
+                res.redirect('/comments');
+            }
+        </code></pre>
+
+        <h4>RESTful comments show</h4>
+        <p>To show, edit or delete specific items, we have to point to the items's unique id.</p>
+        <pre><code>
+            app.get('/comments/:id', (req, res) => {
+                <span class="red">destructure req.params object to obtain the requested id:</span>
+                const { id } = req.params;
+                <span class="red">"find" the requested comments in the comments array (we have to transform the string in a number by using +id or parseInt(id)):</span>
+                const comment = comments.find(c => c.id === +id);
+                <span class="red">render page with the comment passed through:</span>
+                res.render('comments/show', { comment });
+            })
+
+            <span class="red">on show.ejs</span>
+            < h1>Comment id: <%= comment.id %>< /h1>
+            < h2><%= comment.comment %> - <%= comment.username%>< /h2>
+            < a href="comments">Back to all comments< /a>
+        </code></pre>
+
+        <h4>Generating random ids with UUID</h4>
+        <p>In order to generate unique ids, we can make use of an NPM dependency called UUID.</p>
+        <p>After install it using <b>npm i uuid</b>, we have to require it on the script. Here we will use version 4's
+            ids (each version provides a different id format). The id created by UUID is a STRING.</p>
+        <pre><code>
+            <span class="red">on index.js</span>
+            const { v4: uuid } = require('uuid');
+
+            const comments = [
+                {
+                    id: uuid(),
+                    username: 'Todd',
+                    comment: 'lol that is sooo funny'
+                },
+                {
+                    id: uuid(),
+                    username: 'Skyler',
+                    comment: 'I like to go birdwatching with my dog'
+                },
+                {
+                    id: uuid(),
+                    username: 'Sk8erBoi',
+                    comment: 'Plz delete your account, Todd'
+                },
+                {
+                    id: uuid(),
+                    username: 'onlysayswoof',
+                    comment: 'woof woof woof'
+                }
+            ]
+
+            <span class="red">also we have to provide an unique id for each new comment:</span>
+            app.post('/comments', (req, res) => {
+                const { username, comment } = req.body;
+                comments.push({ username, comment, id: uuid() });
+                res.redirect('comments');
+            })
+
+        </code></pre>
+
+        <h4>RESTful requests update</h4>
+        <p>To update (edit, modify) an existing item, we can use the verbs PUT, PATCH or POST.</p>
+        <p>PUT is used to replace all current representations of the target resource with the payload.</p>
+        <p>PATCH is used to apply partial modifications to a resource.</p>
+        <p>POST is used to create a completely new resource item.</p>
+        <pre><code>
+            app.patch('comments/:id', (req, res) => {
+                <span class="red">deconstruct id from the req.params object:</span>
+                const { id } = req.params;
+                <span class="red">"find" that specific comment in our comments array:</span>
+                const foundComment = comments.find(c => c.id === id)
+                <span class="red">(because we're using UUID, and the ID generated by UUID is a string, we don't need to transform it into a number)</span>
+                <span class="red">obtaining the new comment from the req.body object (we could also desctructure/rename it):</span>
+                const newCommentText = req.body.comment;
+                <span class="red">redirect to index.ejs:</span>
+                res.redirect('/comments');
+            })
+        </code></pre>
+
+
+
 
 
 
