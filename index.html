@@ -798,13 +798,92 @@ app.listen(3000, () => {
                 res.redirect('/comments');
             })
         </code></pre>
+        <p>The route in the server that will update (patch) the item is ready. Now we must create a form
+            (comments/:id/edit) for the user to fill the new input data.</p>
+        <pre><code>
+            <span class="red">on index.js</span>
+            app.get('comments/:id/edit', (req, res) => {
+                const { id } = req.params;
+                const comment = comments.find(c => c.id === id);
+                res.render('comments/edit', { comment })
+            })
+
+            <span class="red">on edit.ejs</span>
+            < h1>Edit< /h1>
+            < form action="/comments/<%=comment.id%>">
+                < textarea name="comment" id="" cols="30" rows="10">
+                    <%= comment.comment %>
+                    <span class="red">this will show the current text for the user to update as she wants</span>
+                </ textarea>
+                < button>Save< /button>
+            < /form>
+
+            <span class="red">on show.ejs</span>
+            < h1>Comment id: <%= comment.id %>< /h1>
+            < h2><%= comment.comment %> - <%= comment.username %>< /h2>
+            < a href="/comments">Back to index< /a>
+            < a href="/comments/<%=comments.id%>/edit">Edit comment< /a>
+        </code></pre>
+        <p>An HTML form does not support PATCH method, only supports GET and POST. So we have to install a dependency
+            called 'method-override'.After installing, requiring and app.use ing this, we need to add to the form's
+            action attribute: <b>?_method=PATCH</b>, and also define the method attribute as <b>"post"</b>.</p>
+        <pre><code>
+            <span class="red">on terminal</span>
+            npm i method-override
+
+            <span class="red">on index.js</span>
+            const methodOverride = require('method-override');
+            app.use(methodOverride('_method'));
+
+            <span class="red">on edit.ejs</span>
+            < h1>Edit< /h1>
+            < form <b>method="post"</b> action="/comments/<%=comment.id%><b>?_method=PATCH</b>">
+                < textarea name="comment" id="" cols="30" rows="10">
+                    <%= comment.comment %>
+                </ textarea>
+                < button>Save< /button>
+            < /form>
+        </code></pre>
+
+        <h4>RESTful comments delete</h4>
+        <p>Same as PATCH, DELETE method is not supported as a method in HTML forms (they only accept GET or POST), so we
+            have to use 'method-override' in order to "fake it".</p>
+        <pre><code>
+            <span class="red">on index.js</span>
+            app.delete('/comments/:id', (req, res) => {
+                const { id } = req.params;
+                comments = comments.filter(c => c.id !== id);
+                res.redirect('/comments');
+            })
+
+            <span class="red">on show.ejs</span>
+            < h1>Comment id: <%= comment.id %>< /h1>
+            < h2><%= comment.comment %> - <%= comment.username %>< /h2>
+            < a href="/comments">Back to index< /a>
+            < a href="/comments/<%=comments.id%>/edit">Edit comment< /a>
+            < form method="post" action="/comments/<%=comment.id%>?_method=DELETE">
+                < button>Delete< /button>
+            < /form>
+        </code></pre>
+
+        <h2>MongoDB</h2>
+        <p>According to Mongo's homepage, it is "the most popular database for modern applications". It is commonly used
+            in combination with Node.</p>
+        <p>Mongo is a document database, which we can use to store and receive complex data from.</p>
+        <p>Why use a database, instead of just saving to a file?
+        <ul>
+            <li>Databases can handle large amounts of data efficiently and store ir compactly</li>
+            <li>They provide tools for easy insertion, querying and uploading of data</li>
+            <li>They generally offer security features and control over access to data</li>
+            <li>They generally scale well</li>
+        </ul>
+</p>
 
 
 
 
 
 
-
-        <script src="app.js"></script>
+<script src="app.js"></script>
 
 </html>
