@@ -396,10 +396,13 @@ app.listen(3000, () => {
     < /body>
 </code></pre>
 
-        <h4>Serving static files in Express</h4>
-        <p>To serve static files such as images, CSS files and JS files, use the <b>express.static</b> built-in
-            middleware function in Express.</p>
-        <pre><code>
+<h4>Serving static files in Express</h4>
+<p>To serve static files such as images, CSS files and JS files, use the <b>express.static</b> built-in middleware function in Express.</p>
+<p>Com o Express, é possível entregar os arquivos estáticos de forma separada no sistema. E isso é importante porque você consegue dizer para o servidor, exatamente quais arquivos não precisam de um processamento, mas sim que ele só seja entregue para uso. Dessa forma o servidor vai entender que aquele arquivo, não requer nenhum tipo de lógica ou processamento para ser entregue, ele simplesmente é mostrado na tela para o usuário. Os arquivos estáticos podem ser fotos, arquivos, folhas de estilo css, arquivos javascript, arquivos somente com HTML e entre outros.</p>
+<p>O express.static é um middleware que é integrado ao express e que permite indicar onde estarão os arquivos estáticos a serem carregados. É possível fazer a configuração somente uma vez, e normalmente é feita dentro do arquivo principal do sistema, que pode ser o server.js, main.js, index.js, depende de como configurou seu sistema. Essa configuração indica o diretório do servidor no qual estão os arquivos estáticos, com isso, sempre que no código tiver referência a uma imagem por exemplo, o servidor sabe que precisa ir buscar para o diretório que foi configurado.
+Normalmente é configurado só um diretório e com o nome 'public'.</p>
+
+<pre><code>
     app.use(express.static('/public'));
 
     <span class="red">using path.join to avoid conflicts</span>
@@ -879,6 +882,929 @@ app.listen(3000, () => {
         </ul>
 </p>
 
+<h4>SQL vs. NoSQL databases</h4>
+<p>Structured Query Language (SQL) databases are relational databases. We pre-define a schema of tables before we insert
+    anything. Ex.: MySQL, Postgres, SQLite, Oracle, Microsoft SQL Server.</p>
+<p>No-SQL databases do not use SQL. There are many types of no-sql databases, inluding document, key-value and graph
+    stores. Ex.: MongoDB, CouchDB, Neo4j, Cassandra, Redis.</p>
+
+<h4>Why using Mongo?</h4>
+<ul>
+    <li>Mongo is very commonly used with Node and Express (MEAN & MERN stacks' ME stands for Mongo and Express)</li>
+    <li>It's easy to get started with (though it can be tricky to truly master)</li>
+    <li>It plays particularly well with JavaScript</li>
+    <li>Its popularity also means there is a strong community of developers using Mongo</li>
+</ul>
+
+<h4>Running Mongo (mongosh)</h4>
+<p>To start Mongo, write on Terminal:</p>
+<pre><code>
+    brew services start mongodb-community@6.0
+</code></pre>
+<p>Then, write 'mongosh' to start the shell from where you can control it, create databases, etc.</p>
+<p>To create a new database: 'use databaseName'</p>
+<p>To show existent databases: 'show dbs' or 'show databases'</p>
+
+<h4>JSON & BSON</h4>
+<p>JSON and BSON are close cousins, as their nearly identical names imply, but you wouldn’t know it by looking at them
+    side-by-side. JSON, or JavaScript Object Notation, is the wildly popular standard for data interchange on the web,
+    on which BSON (Binary JSON) is based. </p>
+<p>BSON, or Binary JSON, is the data format that MongoDB uses to organize and store data. This data format includes all
+    JSON data structure types and adds support for types including dates, different size integers, ObjectIds, and binary
+    data.</p>
+<p>MongoDB allows developers to query and manipulate objects by specific keys inside the JSON/BSON document, even in
+    nested documents many layers deep into a record, and create high performance indexes on those same keys and values.
+    When using a MongoDB driver in your language of choice, it’s still important to know that you’re accessing BSON data
+    through the abstractions available in that language.</p>
+
+<h3>Mongo syntax</h3>
+<p>A collection is a grouping of MongoDB documents. Documents within a collection can have different fields. A
+    collection is the equivalent of a table in a relational database system. Documents are individual records in a
+    MongoDB collection and are the basic unit of data in MongoDB.</p>
+
+<h4>Inserting</h4>
+<p>The method insert() stands for the C in CRUD.</p>
+<p>Adding a new collection in the animalShelter database:</p>
+<pre><code>
+    db.dogs.insertOne({name: "Charlie", age: 3, breed: "corgi", carFriendly: true})
+    <span class="red">pass a normal JS object inside the insertOne() method.</span>
+
+    show collections
+    //dogs
+
+    <span class="red">to see what's inside the dogs collection:</span>
+    db.dogs.find()
+//[
+  {
+    _id: ObjectId("630a8a06977e8686019719df"),
+    name: 'Charlie',
+    age: 3,
+    breed: 'corgi',
+    carFriendly: true
+  }
+]
+</code></pre>
+<p>Mongo sets an unique _id for each document (item) included inside a collection.</p>
+<p>db.collectionName.insertOne() inserts one document at a time.</p>
+<p>db.collectionName.insertMany() inserts several documents at a time (an array of objects).</p>
+<p>db.collectionName.insert() does both things.</p>
+<p>Collection.insert() is deprecated. Use insertOne, insertMany, or bulkWrite.</p>
+<pre><code>
+    db.dogs.insert([{name: "Wyatt", breed: "Golden", age: 14, catFriendly: false}, {name: "Tonya", breed: "Chihuahua", age: 17, catFriendly: true}])
+
+    db.dogs.find()
+    //[
+    {
+      _id: ObjectId("630a8a06977e8686019719df"),
+      name: 'Charlie',
+      age: 3,
+      breed: 'corgi',
+      carFriendly: true
+    },
+    {
+      _id: ObjectId("630a8e0f977e8686019719e0"),
+      name: 'Wyatt',
+      breed: 'Golden',
+      age: 14,
+      catFriendly: false
+    },
+    {
+      _id: ObjectId("630a8e0f977e8686019719e1"),
+      name: 'Tonya',
+      breed: 'Chihuahua',
+      age: 17,
+      catFriendly: true
+    }
+  ]  
+
+    db.cats.insert({name: "Blue Steele", age: 6, dogFriendly: false, breed: "Scottish Fold"})
+</code></pre>
+
+<h4>Finding</h4>
+<p>The method find() stands for the R in CRUD.</p>
+<p>db.collectionName.find() gives all the documents in that collection.</p>
+<p>db.collectionName.find({breed: "Corgi"}) will return all documents with that query (case sensitive).</p>
+<p><b>db.collectionName.findOne({catFriendly: true})</b> will find one result for that query.</p>
+
+<h4>Updating</h4>
+<pre><code>
+    db.dogs.updateOne({name: 'Charlie'}, {$set: {age: 4, color: 'chocolate'}})
+    <span class="red">sets the age to 4 and creates color key with value 'chocolate'</span>
+
+    db.dogs.updateMany({catFriendly: true}, {$set: {isAvailable: false}})
+    <span class="red">in all documents with catFriendly set to true, it sets isAvailable property to false.</span>
+
+    db.cats.updateOne({age: 6}, {$set: {age: 7}, $currentDate: {lastChanged: true}})
+    db.cats.find()
+    //{ "_id" : ObjectId("5f3c98f5feaedbe6667d5df8"), "name": "Blue Steele", "age": 7, "dogFriendly": false, "breed": "Scottish fold", "lastChanged": ISODate("2022-08-26T05:51:18.584Z") }
+    <span class="red">$currentDate is another operator that sets the value of the mentioned property as today's current date.</span>
+
+    db.cats.replaceOne({etcetc: etcetc}, {etcetc:etcetc, etcetc:etcetc})
+    <span class="red">replaces an entire document with new data, maintaining the _id</span>
+</code></pre>
+
+<h4>Deleting</h4>
+<pre><code>
+    db.cats.deleteOne({name: "Blue Steele"})
+
+    db.dogs.deleteMany({catFriendly: false})
+
+    db.dogs.deleteMany({})
+    <span class="red">deletes all documents in the dogs collection</span>
+</code></pre>
+
+<h4>Aditional Mongo operators</h4>
+<pre><code>
+    db.dogs.find({'personality.childFriendly': true})
+    <span class="red">selects the childFriendly property that is nested inside the personality property</span>
+
+    db.dogs.find({age {$gt: 8}})
+    <span class="red">finds dogs with an age greater than 8</span>
+
+    db.dogs.find({age {$gte: 8}})
+    <span class="red">finds dogs with an age greater or equal to 8</span>
+
+    db.dogs.find({age {$lt: 8}})
+    <span class="red">finds dogs with an age lesser than 8</span>
+
+    db.dogs.find({age {$lte: 8}})
+    <span class="red">finds dogs with an age lesser or equal to 8</span>
+
+    db.dogs.find({breed: {$in: ['Mutt', 'Corgi']}})
+    <span class="red">finds dogs with breed set to Mutt OR Corgi</span>
+
+    db.dogs.find({breed: {$ne: 'Corgi'}})
+    <span class="red">finds dogs with breeds not equal to Corgi</span>
+
+    db.dogs.find({breed: {$nin: ['Mutt', 'Chihuahua']}})
+    <span class="red">finds dogs that have breed set to neither Mutt or Chihuahua</span>
+
+    db.dogs.find({$or: [{'personality.catFriendly: true'}, {age: {$lte: 2}}]})
+    <span class="red">finds dogs that are either cat friendly or with an age less or equal to 2</span>
+</code></pre>
+
+<h3>Mongoose</h3>
+<p>Mongoose is an Object Data Modeling (ODM) library for MongoDB and Node.js. It manages relationships between data,
+    provides schema validation, and is used to translate between objects in code and the representation of those objects
+    in MongoDB.</p>
+<p>ODMs like Mongoose map documents coming from a database into usable JavaScript objects. Mongoose provides ways for us
+    to model out our application data and define a schema. It offers easy ways to validate data and build complex
+    queries from the comfort of JS.</p>
+
+<h4>Setting up Mongoose</h4>
+<pre><code>
+    <span class="red">on Terminal</span>
+    npm init 
+    <span class="red">initiate npm</span>
+
+    npm i mongoose
+    <span class="red">install Mongoose</span>
+
+    <span class="red">on index.js</span>
+    const mongoose = require('mongoose');
+    mongoose.connect('mongodb://localhost:27017/movieApp');
+    <span class="red">27017 is the default Mongo port; movieApp is the name of our database</span>
+
+    <span class="red">on Terminal</span>
+    node index.js
+    <span class="red">this will try to connect with the selected port via mongoose</span>
+</code></pre>
+<p>Catching connection errors:</p>
+<pre><code>
+    <span class="red">mongoose.connect() returns a promise, so we can handle errors using then/catch:</span>
+    const mongoose = require('mongoose');
+mongoose.connect('mongodb://localhost:27017/movieApp')
+    .then(() => {
+        console.log('CONNECTION OPEN!!!')
+    })
+    .catch(err => {
+        console.log('OH NO ERROR!!!!');
+        console.log(err)
+    })
+</code></pre>
+
+<h4>Mongoose Models</h4>
+<p>For each collection, we have to define a Model. A Model in Mongoose is a sort of JavaScript Class.</p>
+<p>To define a Model, first we have to set its Schema. A Schema is a map for keys in Mongo for different types in JS.
+</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    const movieSchema = new mongoose.Schema({
+        title: String,
+        year: Number,
+        score: Number,
+        rating: String
+    })
+</code></pre>
+<p>Then, create a model from that schema using mongoose.model. The first argument in mongoose.model is the model's name
+    (always capitalized), the second argument is the schema's name. Mongoose will automatically create a collection
+    using the model's name, in lowercase and plural (Movie -> movies).</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    const Movie = mongoose.model('Movie', movieSchema);
+</code></pre>
+<p>Creating a new Movie instance:</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    const amadeus = new Movie({title: 'Amadeus', year: 1986, score: 9.2, rating: 'R'});
+</code></pre>
+<p>This creates an object that is an instance of the Movie class on the JS file. It also creates an '_id' property with
+    an unique id for that item. To save it to the collection movies on
+    the database movieApp, we have to use .save()</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    amadeus.save();
+</code></pre>
+
+<h4>insertMany in Mongoose</h4>
+<p>insertMany accepts an array of objects and creates several documents at the same time. Documents are automatically
+    saved in the database (no need to call .save()).</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    Movie.insertMany([
+    { title: 'Amelie', year: 2001, score: 8.3, rating: 'R' },
+    { title: 'Alien', year: 1979, score: 8.1, rating: 'R' },
+    { title: 'The Iron Giant', year: 1999, score: 7.5, rating: 'PG' },
+    { title: 'Stand By Me', year: 1986, score: 8.6, rating: 'R' },
+    { title: 'Moonrise Kingdom', year: 2012, score: 7.3, rating: 'PG-13' }
+])
+</code></pre>
+
+<h4>Finding in Mongoose</h4>
+<p>The .find() method in Mongoose returns a thenable query. It is not exactly a promise, but can be handled with
+    .then().</p>
+<pre><code>
+    Movie.find({rating: 'PG-13'}).then(data => console.log(data))
+</code></pre>
+<p>By using .exec(), we get a real promise, that can be handled with async/await.</p>
+<p>.findById('idNumber') is also a very commonly used method.</p>
+<pre><code>
+    Movie.findById('630bdc37e79dab934485e0b9').then(m => console.log(m));
+    // {
+        _id: ObjectId("630bdc37e79dab934485e0b9"),
+        title: 'Alien',
+        year: 1979,
+        score: 8.1,
+        rating: 'R',
+        __v: 0
+      }
+</code></pre>
+
+<h4>Updating in Mongoose</h4>
+<p>The syntax is similar to Mongo's, but without $set.</p>
+<pre><code>
+    Movie.updateOne({title: 'Amadeus'}, {year: 1984}).then(res => console.log(res));
+    <span class="red">will update the year in the document with title 'Amadeus' to 1984</span>
+</code></pre>
+<p>Updating more than one document:</p>
+<pre><code>
+    Movie.updateMany({title: {$in: ['Amadeus', 'Stand By Me']}}, {score: 10}).then(res => console.log(res))
+    <span class="red">updates the documents with title Amadeus or Stand By Me to have score equal to 10</span>
+</code></pre>
+<p>By using .findOneAndUpdate with the option 'new' set to true, the thenable query will return the new updated
+    document.</p>
+<pre><code>
+    Movie.findOneAndUpdate({title: 'The Iron Giant'}, {score: 7.8}, {new: true}).then(m => console.log(m))
+</code></pre>
+
+<h4>Deleting with Mongoose</h4>
+<pre><code>
+    Movie.deleteOne({year: {$gte: 1999}}).then(msg => console.log(msg))
+    <span class="red">deletes the first occurance</span>
+
+    Movie.deleteMany({year: {$gte: 1999}}).then(msg => console.log(msg))
+    <span class="red">delete all</span>
+
+    Movie.findOneAndDelete({title: 'Alien'}).then(m => console.log(m))
+    <span class="red">delete one and returns the deleted item</span>
+</code></pre>
+
+<h4>Mongoose Schema validations</h4>
+<p>In Mongoose, it is possible to set a property to required. If the property is not in the new instance of the model
+    created within this Schema, the insertion of that instance-document will not be validated.</p>
+<p>Likewise, if the value of any property doesn't match with the type defined on Schema, it also won't be validated -
+    unless, for example, it is a string like '522' in a type-Number property, in this case it will be converted to a
+    number.</p>
+<pre><code>
+    const productSchema = new mongoose.Schema({
+        name: {
+            type: String,
+            required: true
+        },
+        price: {
+            type: Number,
+        },
+    })
+    
+    const Product = mongoose.model('Product', productSchema);
+    
+    const bike = new Product({ name: 'Mountain Bike', price: 599 })
+    bike.save()
+        .then(data => {
+            console.log('IT WORKED!')
+            console.log(data)
+        })
+        .catch(err => {
+            console.log('OH NO ERROR!!!!')
+            console.log(err)
+        })
+</code></pre>
+
+<h4>Additional Schema Constraints</h4>
+<p>We can define default values for properties on Schemas, as well nest properties. More constraints can be found at
+    https://mongoosejs.com/docs/guide.html#definition </p>
+<pre><code>
+    const productSchema = new mongoose.Schema({
+        name: {
+            type: String,
+            required: true
+        },
+        price: {
+            type: Number,
+            required: true,
+            min: 0
+            <span class="red">minimum price will be 0</span>
+        },
+        onSale: {
+            type: Boolean,
+            default: false
+            <span class="red">default value is false</span>
+        },
+        categories: {
+            type: [String],
+            <span class="red">it must be an array, only consisting of strings</span>
+            default: ['Cycling']
+        },
+        qty: {
+            online: {
+                type: Number,
+                default: 0
+            },
+            inStore: {
+                type: Number,
+                default: 0
+            }
+        },
+        size: {
+            type: String,
+            enum: ['S', 'M', 'L']
+            <span class="red">enum: value must be one of the items of this array</span>
+        }
+    })
+    
+    const Product = mongoose.model('Product', productSchema);
+    
+    const bike = new Product({ name: 'Bike Helmet', price: 599, categories: ['Cycling', 'Safety'], qty: { online: 12, inStore: 2} })
+    bike.save()
+        .then(data => {
+            console.log('IT WORKED!')
+            console.log(data)
+        })
+        .catch(err => {
+            console.log('OH NO ERROR!!!!')
+            console.log(err)
+        })
+</code></pre>
+
+<h4>Validating Mongoose Updates</h4>
+<p>Whenever we want to update a document in using Mongoose, we have to set the option <b>runValidators</b> to true, in
+    order to Mongoose refer again to the Schema validators, and evaluate the inserted properties according to them.</p>
+<pre><code>
+    Product.findOneAndUpdate({ name: 'Tire Pump' }, {price: 29.99}, {new: true, runValidators: true})
+        .then(data => {
+            console.log('IT WORKED')
+            console.log(data)
+        })
+        .catch(err => {
+            console.log('ERROR!')
+            console.log(err)
+        })
+</code></pre>
+
+<h4>Mongoose Validation Errors</h4>
+<p>We can pass error messages to each of the constraints on a Schema.</p>
+<pre><code>
+    const productSchema = new mongoose.Schema({
+        name: {
+            type: String,
+            required: true
+        },
+        price: {
+            type: Number,
+            required: true,
+            min: [0, 'Price must be positive ya dodo!']
+            <span class="red">custom error has been set up</span>
+        },
+        onSale: {
+            type: Boolean,
+            default: false
+        },
+        categories: {
+            type: [String],
+            default: ['Cycling']
+        },
+        qty: {
+            online: {
+                type: Number,
+                default: 0
+            },
+            inStore: {
+                type: Number,
+                default: 0
+            }
+        }
+    })
+</code></pre>
+
+<h4>Model Instance Methods</h4>
+<p>As in JS Classes, we can create methods inside a Mongoose Schema. These methods will be available in every instance
+    of that Schema.</p>
+<p>Ex.: creating a method to toggle 'onSale' value from true to false and vice versa:</p>
+<pre><code>
+    productsSchema.methods.toggleOnSale = function(){
+        this.onSale = !this.onSale;
+        return this.save();
+        <span class="red">'this' will refer to the particular instance where the method was called. Remember that 'this.save()' will return a promise.
+        </span>
+    }
+
+    const findAndtoggleOnSale = async () => {
+        const foundProduct = await Product.findOne({name: 'Mountain Bike'});
+        await foundProduct.toggleOnSale();
+        console.log(foundProduct);
+    }
+</code></pre>
+
+<h4>Adding Model Static Methods</h4>
+<p>In static methods, the keyword 'this' refer to the Model itself, not to a specific instance.</p>
+<p>Ex.: creating a fireSale method, which sets all prices to 0 and puts every instance on sale.</p>
+<pre><code>
+    productSchema.statics.fireSale = function(){
+        return this.updateMany({}, {onSale: true, price: 0})
+    }
+
+    Product.fireSale().then(res => console.log(res));
+
+</code></pre>
+
+<h4>Mongoose Virtuals</h4>
+<p>Virtuals are "methods" that simulate properties that actually won't be saved in the database, but can retrieved in an
+    easy manner.</p>
+<pre><code>
+    <span class="red">on person.js</span>
+    const mongoose = require('mongoose');
+mongoose.connect('mongodb://localhost:27017/shopApp')
+    .then(() => {
+        console.log('CONNECTION OPEN!!!')
+    })
+    .catch(err => {
+        console.log('OH NO ERROR!!!!');
+        console.log(err)
+    })
+
+    <span class="red">defining a Schema</span>
+    const personSchema = new mongoose.Schema({
+        first: String,
+        last: String
+    })
+
+    <span class="red">defining a virtual fullName</span>
+    personSchema.virtual('fullName').get(function(){
+        return `${this.first} ${this.last}`
+    })
+
+    <span class="red">defining a Model</span>
+    const Person = mongoose.model('Person', personSchema);
+
+    <span class="red">creating a document (instance)</span>
+    const tammy = new Person({first: 'Tammy', last: 'Chow'})
+    tammy.save();
+    <span class="red">the collection will be called 'people' because Mongo automatically pluralize model's name</span>
+
+    console.log(tammy.fullName);
+    //'Tammy Chow'    
+</code></pre>
+<p>There are also virtual setters (just put .set() after get() and pass in a function), which will actually update the
+    values of the properties in the document.</p>
+
+<h4>Mongoose Middlewares</h4>
+<p>The Mongoose Middleware are pieces of code that can be executed 'before' or 'after' a method is executed. For
+    example, if we remove a user from the database, we will also want to remove all of his comments, posts, etc on the
+    database.</p>
+<p>Middleware are always executed inside of asynchronous functions.</p>
+<pre><code>
+    personSchema.pre('save', async function(){
+        console.log('ABOUT TO SAVE!');
+    });
+    <span class="red">this function will run before every save()</span>
+
+    personSchema.post('save', async function(){
+        console.log('JUST SAVED!');
+    })
+    <span class="red">this function will run after every save()</span>
+
+</code></pre>
+
+<h2>Mongoose with Express</h2>
+<p>In this section, we learn how to create a simple app, connecting UI to CRUDs via Express, and connecting Express to
+    Mongo Server via Mongoose.</p>
+<p>UI ---CRUD---> Express ---> Mongoose ---> MongoDB</p>
+<h4>Express + Mongoose basic setup</h4>
+<pre><code>
+    <span class="red">on terminal</span>
+    npm init -y 
+    npm i express ejs mongoose
+
+    <span class="red">on index.js</span>
+    const express = require('express');
+    const app = express();
+    const path = require('path');
+    const mongoose = require('mongoose');
+mongoose.connect('mongodb://localhost:27017/farmStand')
+    .then(() => {
+        console.log('MONGO CONNECTION OPEN!!!')
+    })
+    .catch(err => {
+        console.log('OH NO Mongo connection ERROR!!!!');
+        console.log(err)
+    })
+
+    app.set('views', path.join(__dirname, 'views'));
+    app.set('view engine', 'ejs');
+
+    app.get('/dog', (req, res) => {
+        res.send('WOOF!');
+    })
+
+    app.listen(3000, () => {
+        console.log('APP IS LISTENING ON PORT 3000!')
+    })
+</code></pre>
+
+<h4>Creating our Model (E+M)</h4>
+<p>We'll start by creating a 'models' folder; each model will be kept in a single .js file. On each model file, we have
+    only to require 'mongoose'; we are not connecting to the database from this files; instead, we are requiring this
+    model files into index.js, which will connect them and feed the database.</p>
+<pre><code>
+    <span class="red">on models/products.js</span>
+    const mongoose = require('mongoose');
+
+    const productSchema = new mongoose.Schema({
+        name: {
+            type: String,
+            required: true
+        },
+        price: {
+            type: Number,
+            required: true,
+            min: 0
+        },
+        category: {
+            type: String,
+            enum: ['fruit', 'vegetable', 'dairy']
+        }
+    })
+
+    const Product = mongoose.model('Product', productSchema);
+
+    module.exports = Product;
+
+    <span class="red">on index.js</span>
+    const Product = require('./models/product')
+</code></pre>
+<p>In order to feed the database with new data whenever needed, we'll create a 'seeds.js' file; this file is created
+    only for development purposes. This file will require the models and also connect to Mongoose.</p>
+<pre><code>
+    <span class="red">on seeds.js</span>
+    <span class="red">requiring Product and mongoose, connecting to mongodb via mongoose</span>
+    const mongoose = require('mongoose');
+
+    const Product = require('./models/product')
+
+    mongoose.connect('mongodb://localhost:27017/shopApp')
+    .then(() => {
+        console.log('MONGO CONNECTION OPEN!!!')
+    })
+    .catch(err => {
+        console.log('OH NO Mongo connection ERROR!!!!');
+        console.log(err)
+    })
+
+    <span class="red">creating a new product document</span>
+    const p = new Product({
+        name: 'Ruby Grapefruit',
+        price: 1.99,
+        category: 'fruit'
+    });
+    p.save().then(p => {
+        console.log(p);
+    })
+    .catch(e => {
+        console.log(e)
+    })
+
+    <span class="red">on node shell on terminal:</span>
+        node seeds.js
+
+    <span class="red">on mongoose shell on terminal</span>
+        show dbs 
+        use farmStand 
+        show collections
+        db.products.find()
+        <span class="red">//the document for 'Ruby Grapefruit' will appear here</span>
+</code></pre>
+<p>Seeding the database with more products:</p>
+<pre><code>
+    const seedProducts = [
+    {
+        name: 'Fairy Eggplant',
+        price: 1.00,
+        category: 'vegetable'
+    },
+    {
+        name: 'Organic Goddess Melon',
+        price: 4.99,
+        category: 'fruit'
+    },
+    {
+        name: 'Organic Mini Seedless Watermelon',
+        price: 3.99,
+        category: 'fruit'
+    },
+    {
+        name: 'Organic Celery',
+        price: 1.50,
+        category: 'vegetable'
+    },
+    {
+        name: 'Chocolate Whole Milk',
+        price: 2.69,
+        category: 'diary'
+    },
+]
+
+Product.insertMany(seedProducts)
+    .then(res => {
+        console.log(res)
+    })
+    .catch(e => {
+        console.log(e)
+    })
+</code></pre>
+
+<h4>Generating products index page</h4>
+<p>Now we go back to index.js and request the products documents from the database:</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    app.get('/products', async (req, res) => {
+        const products = await Product.find({});
+        console.log(products);
+        res.send('ALL PRODUCTS WILL BE HERE!');
+    })
+</code></pre>
+<p>We will create a folder called 'views', inside of it create a folder called 'products'. Inside the 'products' folder,
+    create a file called 'index.ejs'. Now we can render './views/products/index.ejs' as our get response:</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    app.get('/products', async (req, res) => {
+        const products = await Product.find({});
+        console.log(products);
+        res.render('products/index', { products });
+        <span class="red">don't forget to pass { products } through the render to get access to them on 'index.ejs'.</span>
+    })
+</code></pre>
+
+<h4>Products details page</h4>
+<p>Creating a default details page for the products:</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    app.get('/products/:id', async (req, res) => {
+        const { id } = req.params;
+        const product = await Product.findById(id);
+        res.render('products/show', { product });
+    })
+
+    <span class="red">on views/products/show.ejs</span>
+    < h1>
+        <%= product.name %>
+    < /h1>
+    < ul>
+        < li>Price: $<%= product.price %>
+        < /li>
+        < li>Category: <%= product.category %>
+        < /li>
+    < /ul>
+</code></pre>
+<p>Now on the 'all products' page (views/products/index.ejs) we can transform each product's name into a link to its
+    details page:</p>
+<pre><code>
+    < h1>All Products</h1>
+    < ul>
+        <% for(let product of products) { %>
+            < li>
+                < a href="/products/<%=product._id%>">
+                    <%= product.name %>
+                < /a>
+            < /li>
+            <% } %>
+    < /ul>
+</code></pre>
+
+<h4>Creating new products</h4>
+<p>In order to create new products, we first have to define a GET route to a form, where the user will provide the new
+    product data. Then we have to create a POST route to actually insert the new product's data into the database.</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    app.get('/products/new', (req, res) => {
+        res.render('products/new');
+    })
+
+    <span class="red">on views/products/new.ejs</span>
+    <h1>Add a Product</h1>
+    <form action="/products" method="POST">
+        < label for="name">Product name: </ label>
+        < input type="text" name="name" id="name" placeholder="product name">
+        < label for="price">Price (unit): < /label>
+        < input type="number" id="price" name="price" placeholder="price">
+        < label for="category">Select category: < /label>
+        < select name="category" id="category">
+            < option value="fruit">fruit< /option>
+            < option value="vegetable">vegetable</ option>
+            < option value="diary">diary< /option>
+        < /select>
+        < button>Add product< /button>
+    < /form>
+</code></pre>
+<p>Defining POST route:</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    app.use(express.urlencoded({extended: true}));
+    <span class="red">remember, this is necessary to get access to the submitted form queries/values</span>
+
+    <span class="red">still on index.js</span>
+    app.post('/products', async (req, res) => {
+        const newProduct = new Product(req.body);
+        await newProduct.save();
+        res.redirect(`/products/${newProduct._id}`);
+    })
+</code></pre>
+<p>Now put a link to the form on the product's index page:</p>
+<pre><code>
+    <span class="red">on index.ejs</span>
+    < a href="/products/new">Add new product< /a>
+</code></pre>
+
+<h4>Updating products (E+M)</h4>
+<p>As with creating new products, first we have to define a GET route to a form page, then create an 'edit.ejs' page,
+    then define a POST route to
+    update the database.</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    app.get('/products/:id/edit', async (req, res) => {
+        const { id } = req.params;
+        const product = await Product.findById(id)
+        res.render('products/edit', { product });
+    })
+
+    <span class="red">on views/products/edit.ejs</span>
+    < h1>Edit Product</h1>
+    < form action="/products/<%=product._id%>" method="POST">
+        < label for="name">Product name: < /label>
+        < input type="text" name="name" id="name" placeholder="product name" value="<%=product.name%>">
+        < label for="price">Price (unit): < /label>
+        < input type="number" id="price" name="price" placeholder="price" value="<%=product.price%>">
+        < label for="category">Select category: < /label>
+        < select name="category" id="category">
+            < option value="fruit">fruit< /option>
+            < option value="vegetable">vegetable< /option>
+            < option value="diary">diary< /option>
+        < /select>
+        < button>Submit< /button>
+    < /form>
+</code></pre>
+<p>To define an update route, we must use PUT or PATCH verbs. But, remember, HTML forms don't accept these verbs, only
+    accept POST or GET, so we have to install, require and use the 'method-override' package.</p>
+<pre><code>
+    <span class="red">on Terminal</span>
+    npm i method-override
+
+    <span class="red">on index.js</span>
+    const methodOverride = require('method-override');
+    app.use(methodOverride('_method'));
+
+    <span class="red">on edit.ejs</span>
+    < form action="/products/<%=product._id%>?_method=PUT" method="POST">< /form>
+
+    <span class="red">on index.js</span>
+    app.put('/products/:id', async (req, res) => {
+        const { id } = req.params;
+        const product = await Product.findByIdAndUpdate(id, req.body, { runValidators: true, new: true });
+        res.redirect(`/products/${product._id}`);
+    })
+</code></pre>
+<p>Now we have to put a link in each product details page.</p>
+<pre><code>
+    <span class="red">on show.ejs</span>
+    < a href="/products/<%=product._id%>/edit">Edit Product</a>
+</code></pre>
+<p>And put a link on edit page to cancel edit:</p>
+<pre><code>
+    < a href="/products/<%=product._id%>">Cancel</a>
+</code></pre>
+<p>This part is just a small detail. On the edit page, the actual category of the product will not be presented, unless
+    we add some logic there. There is an HTML attribute called selected, which accepts a boolean as its value. If it is
+    true, then the option will be set to selected as default.</p>
+<pre><code>
+    <span class="red">on edit.ejs</span>
+    < select name="category" id="category">
+        < option value="fruit" <%=product.category==='fruit' ? 'selected' : '' %>>fruit< /option>
+        < option value="vegetable" <%=product.category==='vegetable' ? 'selected' : '' %>>vegetable< /option>
+        < option value="diary" <%=product.category==='diary' ? 'selected' : '' %>>diary< /option>
+    < /select>
+</code></pre>
+
+<h4>Deleting products (E+M)</h4>
+<p>As with updating, in order to make a DELETE request using a HTML form, we have to make use of 'method-override'.</p>
+<pre><code>
+    <span class="red">on show.ejs</span>
+    < form action="/products/<%=product._id%>?_method=DELETE" method="POST">
+        < button>Delete</ button>
+    < /form>
+</code></pre>
+
+<h4>Bonus: Filtering by Category</h4>
+<p>To show a page with all vegetables, all fruits or all dairies, we will add query strings to the request when clicking
+    a category name.</p>
+<pre><code>
+    <span class="red">on show.ejs</span>
+    <ul>
+        <li>Price: $<%= product.price %>
+        </li>
+        <li>Category: <a href="/products?category=<%= product.category %>">
+                <%= product.category %>
+            </a>
+        </li>
+    </ul>
+
+    <span class="red">on index.js</span>
+    app.get('/products', async (req, res) => {
+        const { category } = req.query;
+        if (category) {
+            const products = await Product.find({ category: category });
+            res.render('products/index', { products, category });
+        } else {
+            const products = await Product.find({}); res.render('products/index', { products, category: 'All' });
+        }
+    })
+
+    <span class="red">on index.ejs</span>
+    <h1>
+        <%= category %> Products
+    </h1>
+</code></pre>
+
+<h3>Middlewares in Express</h3>
+<p>Here begins Colt's section 40.</p>
+<p>Express is a routing and middleware web framework that has minimal functionality of its own: An Express application is essentially a series of middleware function calls.</p>
+<p>Middleware functions are functions that have access to the request object (req), the response object (res), and the next middleware function in the application’s request-response cycle. The next middleware function is commonly denoted by a variable named next.</p>
+<p>Middlewares can end the HTTP request by sending back a response with methods like <b>res.send()</b>. Or middlewares can be chained together, one after another by calling <b>next()</b>.</p>
+
+<h4>next()</h4>
+<p>As we talked earlier, <b>app.use(< somemiddleware>)</b> will be executed in every single request that is made. The function <b>nest()</b> can be called in order to keep executing the next middlewares inside of other routes that match the requested path.</p>
+<pre><code>
+    app.use((req, res, next) => {
+        console.log('THIS IS MY FIRST MIDDLEWARE!');
+        return next();
+    })
+    app.use((req, res, next) => {
+        console.log('THIS IS MY SECOND MIDDLEWARE!');
+        return next();
+    })
+    <span class="red">for every HTTP request, will log:
+        //THIS IS MY FIRST MIDDLEWARE!
+        //THIS IS MY SECOND MIDDLEWARE!
+        and then search for any matching route
+    </span>
+</code></pre>
+<pre><code>
+    app.use((req, res, next)=> {
+        console.log(req.path, req.method.toUpperCase());
+        next();
+    })
+    <span class="red">will console.log the path and the method of every request</span>
+</code></pre>
+
+<h4>Setting up a 404 route</h4>
+<p>As the last route on our file, just before app.listen, we can write an app.use to catch all the NOT FOUND requests:</p>
+<pre><code>
+    app.use((req, res) =>{
+        res.status(404).send('NOT FOUND!');
+        <span class="red">status(404) will set the status of the response to 404</span>
+    })
+</code></pre>
+
+
+/usr/local/Cellar/mongodb-community/6.0.1/bin
 
 
 
