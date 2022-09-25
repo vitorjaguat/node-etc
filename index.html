@@ -1802,13 +1802,2327 @@ Product.insertMany(seedProducts)
         <span class="red">status(404) will set the status of the response to 404</span>
     })
 </code></pre>
-21590100
-21590163
 
-/usr/local/Cellar/mongodb-community/6.0.1/bin
+<h4>Using callbacks to call middlewares</h4>
+<p>app.method (app.get, app.post etc) routes accept callback functions that will trigger once that route is requested. These callback functions must contain the next() method as its last line, otherwise the route will stop executing there.</p>
+<pre><code>
+    const verifyPassword = (req, res, next) => {
+        const { password } = req.query;
+        if (password === 'chickennugget') {
+            next();
+        } else {
+            res.send('SORRY YOU NEED A PASSWORD');
+        }
+    }
+
+    app.get('/secret', <b>verifyPassword</b>, (req, res) => {
+        res.send('MY SECRET IS: Sometimes I wear I wear headphones in public so I dont have to talk to anyone');
+    })    
+</code></pre>
+
+<h4>ejs-mate package</h4>
+<p><b>ejs-mate</b> is a package that makes creating templates even more easy.</p>
+<pre><code>
+    <span class="red">on terminal</span>
+    npm i ejs-mate
+
+    <span class="red">on app.js</span>
+    const ejsMate = require('ejs-mate');
+
+    app.engine('ejs', ejsMate);
+
+    <span class="red">then inside of /views create a layouts folder, and a file boilerplate.ejs inside of it</span>
+
+    <span class="red">on boilerplate.ejs</span>
+    <body>
+        <h1>BEFORE</h1>
+        <%- body %>
+        <h1>AFTER</h1>
+    </body>
+
+    <span class="red">on every page we want to apply the template (remove head if it is in that boilerplate;)</span>
+    <% layout('layouts/boilerplates') %>
+
+</code></pre>
+
+<h3>Handling errors in Express</h3>
+<p>Colt Steele section 42.</p>
+<p>Express comes with a built-in error handler that takes care of any errors that might be encountered in the app. We also can customize the error messages, throwing errors:</p>
+<pre><code>
+    const verifyPassword = (req, res, next) => {
+        const { password } = req.query;
+        if (password === 'chickennugget') {
+            next();
+        } else {
+            throw new Error('Password required!');
+        }
+    }
+    <span class="red">the error message will be shown as the first line of the built-in error</span>
+</code></pre>
+<p>Define error-handling middleware functions in the same way as other middleware functions, except error-handling functions have four arguments instead of three: <b>(err, req, res, next)</b>. For example:</p>
+<pre><code>
+    app.use((err, req, res, next) => {
+        console.log('***********************');
+        console.log('*********ERROR**********');
+        console.log('***********************');
+        next(err);
+    })
+    <span class="red">if you pass err to next(), Express will handle the error with its built-in error handler.</span>
+</code></pre>
+<p>You define error-handling middleware last, after other app.use() and routes calls.</p>
+
+<h4>Defining a Error Class</h4>
+<p></p>
+<pre><code>
+    <span class="red">on AppError.js</span>
+    class AppError extends Error {
+        constructor(message, status){
+            super();
+            this.message = message;
+            this.status = status;
+        }
+    }
+    module.exports = AppError;
+
+    <span class="red">on index.js</span>
+    const AppError = require('./AppError');
+
+    const verifyPassword = (req, res, next) => {
+        const { password } = req.query;
+        if (password === 'chickennugget') {
+            next();
+        } else {
+            throw new AppError('Password required!', 401);
+        }
+    }
+
+    app.use((err, req, res, next) => {
+        const { status = 500, message = 'Something Went Wrong' } = err;
+        res.status(status).send(message);
+    })
+</code></pre>
+
+<h4>Handling async errors</h4>
+<p>It is good practice to always wrap our code inside try/catch inside of async routes.</p>
+<pre><code>
+    app.get('/products/:id', async (req, res, next) => {
+        try {
+            const { id } = req.params;
+            const product = await Product.findById(id);
+            if (!product) {
+                throw new AppError('Product Not Found', 404);
+            }
+            res.render('products/show', { product });
+        } catch(e) {
+            next(e);
+        }
+    })
+</code></pre>
+<p>In this case, we are handling the product id error with a custom message. If such an error ocurrs, it will be thrown and catched by next(e). If any other error occurs, it will also be catched. The next(e) will send this error directly to the app.use(err, req, res, next) route.</p>
+
+<h4>Defining a wrapAsync() catch utility</h4>
+<p>Instead of wrapping every single async function in our Express routes in try/catch, we can refactor the error handling of async functions in Express apps by creating a catch utility:</p>
+<pre><code>
+    <span class="red">defining wrapAsync function:</span>
+    function wrapAsync(fn) {
+        return function(req, res, next) {
+            fn(req, res, next).catch(e => next(e));
+        }
+    }
+
+    <span class="red">wraping every async route inside of it:</span>
+    app.get('/products/:id', wrapAsync(async (req, res, next) => {
+        const { id } = req.params;
+        const product = await Product.findById(id);
+        if (!product) {
+            throw new AppError('Product Not Found', 404);
+        }
+        res.render('products/show', { product });
+    }))
+</code></pre>
+<p>All of this is valid only if we are using Express v4. In Express v5 all of this is not necessary anymore.</p>
+
+<h4>Differentiating Mongoose errors</h4>
+<p>We can differentiate the way we handle different errors that came from Mongoose (eg, invalid ids, validation errors - user not provides a value for a required field on a form) by getting the err properties, like <b>err.name</b> or <b>err.message</b>. Express errors don't have a name property, but Mongoose errors do have, so we can differentiate how we handle each one.</p>
+<pre><code>
+    const handleValidationError = err => {
+        console.log(err.name)
+        <span class="red">or we can open a custom page that explains to the user what is missing</span>
+    }
+
+    app.use((err, req, res, next) => {
+        console.log(err.name);
+        if (err.name === 'ValidationError') err =   handleValidationError(err);
+        next(err);
+    })
+</code></pre>
+
+<h4>Client-side Form Validations</h4>
+<p>First of all, we can count on the browser html form validation, by adding the <b>required</b> attribute in the input element in HTML. It works well, but we can use Bootstrap to make it more user-friendly.</p>
+<p>CSS Framework Bootstrap has a client-side form validation. Docs: https://getbootstrap.com/docs/5.2/forms/validation/  </p>
+<p>1. Add <b>required</b> attribute to all input elements you want to require.</p>
+<p>2. Add <b>novalidate</b> attribute to the form element. This will prevent the browser to run the default html validation.</p>
+<pre><code>
+    <span class="red">on new.ejs</span>
+    < form action="/campgrounds" method="POST" <b>novalidate class="validated-form"</b>>
+        < div class="mb-3">
+            < label class="form-lable" for="title">Title: </>
+            < input class="form-control" type="text" name="campground[title]" id="title" <b>required</b>>
+        < /div>
+</code></pre>
+<p>3. Copy/paste the JS code to prevent the form from being submitted if the required fields are empty: https://getbootstrap.com/docs/5.2/forms/validation/</p>
+<pre><code>
+    <span class="red">on new.ejs</span>
+    <script>
+    // Example starter JavaScript for disabling form submissions if there are invalid fields
+(() => {
+  'use strict'
+
+  // Fetch all the forms we want to apply custom Bootstrap validation styles to
+  const forms = document.querySelectorAll('.validated-form')
+
+  // Loop over them and prevent submission
+  Array.from(forms).forEach(form => {
+    form.addEventListener('submit', event => {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+
+      form.classList.add('was-validated')
+    }, false)
+  })
+})()
+</script>
+</code></pre>
+<p>4. If we want, we can add a div.valid-feedback under each input and add a message like 'Looks good!' inside of this div.</p>
+<pre><code>
+    <span class="red">on new.ejs</span>
+    < form action="/campgrounds" method="POST" <b>novalidate class="validated-form"</b>>
+        < div class="mb-3">
+            < label class="form-lable" for="title">Title: </>
+            < input class="form-control" type="text" name="campground[title]" id="title" <b>required</b>>
+            < div class="valid-feedback">Looks good!</>
+        < /div>
+</code></pre>
+
+<h4>Server-side validation: JOI</h4>
+<p>Up to now, client-side validation is ready, so the user won't be able, for example, to add a new Campground with no title. But the user could still use some out-browser tool to post a request, like Postman. So we have also to guarantee validation of forms on the server-side.</p>
+<p>We can easily do that using JOI. JOI is a JS tool, not-Express-specific, to validate Schemas in a database model.</p>
+<pre><code>
+    <span class="red">on terminal</span>
+    npm i joi
+
+    <span class="red">on app.js</span>
+    const Joi = require('joi');
+
+    app.post('/campgrounds', catchAsync(async (req, res, next) => {
+        <b>const campgroundSchema = Joi.object({
+            campground: Joi.object({
+                title: Joi.string().required(),
+                price: Joi.number().required().min(0),
+                image: Joi.string().required(),
+                location: Joi.string().required(),
+                description: Joi.string().required()
+            }).required()
+        })
+        const { error } = campgroundSchema.validate(req.body);
+        if (error) {
+            const msg = error.details.map(el => el.message).join(',');
+            throw new ExpressError(msg, 400);
+        }</b>
+        
+        const campground = new Campground(req.body.campground);
+        await campground.save();
+        res.redirect(`/campgrounds/${campground._id}`);
+    }))
+</code></pre>
+<p>As we can see above, this campgroundSchema is used by Joi to validate (or not) the provided object (req.body). Joi will compare the properties in req.body with those that are specificated in campgroundSchema; in case of non-validation, Joi will create an error that can be thrown or desconstructed.</p>
+
+<h4>Creating a JOI validation middleware</h4>
+<p>In order to refactor this route (and in order to be able to reuse this code on other routes), we will create a validation middleware.</p>
+<pre><code>
+    <span class="red">on schemas.js</span>
+    const Joi = require('joi');
+
+    module.exports.campgroundSchema = Joi.object({
+    campground: Joi.object({
+        title: Joi.string().required(),
+        price: Joi.number().required().min(0),
+        image: Joi.string().required(),
+        location: Joi.string().required(),
+        description: Joi.string().required()
+    }).required()
+    });
+    
+    <span class="red">on app.js</span>
+    const { validateCampground } = require('./schemas');
+    
+    const validateCampground = (req, res, next) => {
+        const { error } = campgroundSchema.validate(req.body);
+        if (error) {
+            const msg = error.details.map(el => el.message).join(',');
+            throw new ExpressError(msg, 400);
+        } else {
+            next();
+        }
+    }
+
+    app.post('/campgrounds', validateCampground, catchAsync(async (req, res, next) => {
+        // if(!req.body.campground) throw new ExpressError('Invalid Campground Data', 400);
+    
+        const campground = new Campground(req.body.campground);
+        await campground.save();
+        res.redirect(`/campgrounds/${campground._id}`);
+    }))
+
+    app.put('/campgrounds/:id', validateCampground, catchAsync(async (req, res) => {
+        const { id } = req.params;
+        const campground = await Campground.findByIdAndUpdate(id, { ...req.body.campground });
+        res.redirect(`/campgrounds/${campground._id}`)
+    }))
+</code></pre>
+
+<h3>Data Relationships with Mongo</h3>
+<p>When a database stores users and also their comments, reviews, posts and likes, we will have to handle data relationships to make, for example, an user's posts related (and "belonging") to this specific user. This user will have some permissions over this post that other users don't, for example, he can delete or edit this post.</p>
+
+<h4>One to Few relationships</h4>
+<p>These are relationships where there is just a limited number of items that relate to the one that is being considered. For example, a user who has 2 or 3 addresses.</p>
+<pre><code>
+    const mongoose = require('mongoose');
+
+    mongoose.connect('mongodb://localhost:27017/relationshipDemo')
+        .then(() => {
+            console.log('Mongo Connection open!');
+        })
+        .catch(err => {
+            console.log('Mongo Connection error!')
+            console.log(err);
+        })
+
+    const userSchema = new mongoose.Schema({
+        first: String,
+        last: String,
+        addresses: [
+            {
+                street: String,
+                city: String,
+                state: String,
+                country: String
+            }]
+    })
+
+    const User = mongoose.model('User', userSchema);
+
+    const makeUser = async () => {
+        const u = new User({
+            first: 'Harry',
+            last: 'Potter'
+        });
+        u.addresses.push({
+            street: '123 Sesame St.',
+            city: 'New York',
+            state: 'NY',
+            country: 'USA'
+        })
+        const res = await u.save();
+        console.log(res);
+    }
+    makeUser();
+</code></pre>
+<p>Mongo will add a new ID to each address. If we don't want that, we can add _id: {id: false} as one of the Schema properties.</p>
+<p>Adding another address to the same user:</p>
+<pre><code>
+    const addAddress = async (id) => {
+        const user = await User.findById(id);
+        user.addresses.push({
+            street: '99 3rd St.',
+            city: 'New York',
+            state: 'NY',
+            country: 'USA'
+        })
+        const res = await user.save();
+        console.log(res);
+    }
+    addAddress(73u3hhe738289e933eds)
+</code></pre>
+
+<h4>One to Many relationships</h4>
+<p>When there are a lot of items that relate to a property in one document, we can store the items in a different Schema, different model, and then relate them using their ids.</p>
+<pre><code>
+    const productSchema = new mongoose.Schema({
+        name: String,
+        price: Number,
+        season: {
+            type: String,
+            enum: ['Spring', 'Summer', 'Fall', 'Winter']
+        }
+    });
+    
+    const Product = mongoose.model('Product', productSchema);
+
+    Product.insertMany([
+        { name: 'Goddess Melon', price: 4.99, season: 'Summer' },
+        { name: 'Sugar Baby Watermelon', price: 4.99, season: 'Summer' },
+        { name: 'Aspargus', price: 3.99, season: 'Spring' }
+    ]);
+
+    const farmSchema = new mongoose.Schema({
+        name: String,
+        city: String,
+        products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product'}]
+        <span class="red">this means this property will accept ObjectID types
+        for example: ObjectID('73673hduhueh82')
+        The 'ref' property indicates which model to use during population.
+        </span>
+    })    
+
+    const Farm = mongoose.model('Farm', farmSchema);
+
+    const makeFarm = async () => {
+        const farm = new Farm({ name: 'Full Belly Farms', city: 'Guinda, CA', });
+        const melon = await Product.findOne({ name: 'Goddess Melon'});
+        farm.products.push(melon);
+        await farm.save();
+        console.log(farm);
+    }
+    makeFarm();
+</code></pre>
+<p>As a result of the above script, Mongo will create a document for the farm 'Full Belly Farms' with the 'Goddess Melon' as a product, but the product will only be referenced by its _id, like this: ObjectID('7iuheuh7387h2i2o').</p>
+<p>Adding more products to a farm:</p>
+<pre><code>
+    const addProduct = async () => {
+        const farm = await Farm.findOne({ name: 'Full Belly Farms'});
+        const watermelon = await Product.findOne({ name: 'Sugar Baby Watermelon' });
+        farm.products.push(watermelon);
+        await farm.save();
+        console.log(farm);
+    }
+</code></pre>
+
+<h4>Mongoose Populate</h4>
+<p>The Mongoose <b>.populate('property')</b> method allows us to populate a document with actual data from the nested documents. It will use as a reference the 'ref' that was provided when defining the parent's Schema.</p>
+<pre><code>
+    Farm.findOne({ name: 'Full Belly Farms' })
+        .then(farm => console.log(farm));
+    <span class="red">this will show the farm document but the 'products' property will contain only the ids of the products.</span>
+
+    Farm.findOne({ name: 'Full Belly Farms' })
+        .populate('products')
+        .then(farm => console.log(farm));
+    <span class="red">this will populate the 'products' property will all data, data will be constructed using 'ref' model.</span>
+</code></pre>
+
+<p>Note from the future (Colt lecture 525): populating only one field + nested populations (populating one field inside of another field):</p>
+<pre><code>
+    router.get('/:id', catchAsync(async (req, res) => {
+        const campground = await Campground.findById(req.params.id).populate({
+            path: 'reviews',
+            populate: {
+                path: 'author',
+                select: 'username'
+            } <span class="red">will populate 'reviews' and also every reviews' author; 
+            will only populate 'username' field of review's author.</span>
+        }).populate('author', 'username');
+        <span class="red">will populate only the 'username' field on 'author'. (that's the same as using <b>select</b> in the detailed object version.</span>
+        if(!campground){
+            req.flash('error', 'Sorry, campground not found');
+            return res.redirect('/campgrounds');
+        }
+        res.render('campgrounds/show', {campground})
+    }))
+</code></pre>
+<p>More info on populate(): https://mongoosejs.com/docs/api.html#query_Query-populate </p>
+
+<h4>One to "bajillions" relationships</h4>
+<p>When there are thousands or more children documents, it's more efficient to store a reference to the parent on the child document.</p>
+<p>For example, a user is the author of hundreds of tweets:</p>
+<pre><code>
+    const userSchema = new mongoose.Schema({
+        username: String,
+        age: Number
+    });
+
+    const tweetSchema = new mongoose.Schema({
+        text: String,
+        likes: Number,
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+    });
+
+    const User = mongoose.model('User', userSchema);
+    const Tweet = mongoose.model('Tweet', tweetSchema);
+
+    const makeTweets = async () => {
+        const user = new User({ username: 'chickenfan99', age: 61 });
+        const tweet1 = new Tweet({ text: 'omg I love my chicken family!', likes: 0 });
+        tweet1.user = user;
+        user.save();
+        tweet1.save();
+    }
+    makeTweets();
+</code></pre>
+<p>Adding a new tweet:</p>
+<pre><code>
+    const makeTweets = async () => {
+        const user = await User.findOne({ username: 'chickenfan99' });
+        const tweet2 = new Tweet({ text: 'bock bock my chicken makes noises', likes: 1239 });
+        tweet2.user = user;
+        tweet2.save();
+    }
+    makeTweets();
+</code></pre>
+<p>Populating a tweet (child) document with its user (parent)'s data:</p>
+<pre><code>
+    const findTweet = async () => {
+        const t = await Tweet.findOne({});
+        console.log(t);
+    }
+    <span class="red">only shows the user's id</span>
+
+    const findTweet = async () => {
+        const t = await Tweet.findOne({}).populate('user');
+        console.log(t);
+    }
+    <span class="red">will show user's complete data</span>
+
+    const findTweet = async () => {
+        const t = await Tweet.findOne({}).populate('user', 'username');
+        console.log(t);
+    }
+    <span class="red">will only show 'username' property of 'user'</span>
+</code></pre>
+
+<h4>Mongo relationships with Express</h4>
+<p>Colt Steele's lecture 460.Refering to mongoose-basics demo project.</p>
+<p>In this section we are going to add a 'farm' model and associate different farms to different products.</p>
+<p>Our relationship strategy will be to mutually associate farms to products (each product will have a farm property) and products to farms (each farm will have a products property).</p>
+<pre><code>
+    <span class="red">creating farm.js (schema and model for farms)</span>
+    const mongoose = require('mongoose');
+    const { Schema } = mongoose;
+
+    const farmSchema = new Schema({
+        name: {
+            type: String,
+            required: [true, 'Farm must have a name!']
+        },
+        city: {
+            type: String,
+        },
+        email: {
+            type: String, 
+            required: [true, 'Email required']
+        },
+        products: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: 'Product'
+            }]
+    })
+    const Farm = mongoose.model('Farm', farmSchema);
+    module.exports = Farm;
+
+    <span class="red">include a 'farm' property on productSchema:</span>
+    const productSchema = new mongoose.Schema({
+        name: {
+            type: String,
+            required: true
+        },
+        price: {
+            type: Number,
+            required: true,
+            min: 0
+        },
+        category: {
+            type: String,
+            lowercase: true,
+            enum: ['fruit', 'vegetable', 'diary']
+        },
+        <b>farm: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Farm'
+        }</b>
+    })
+</code></pre>
+    <p>Adding a 'create new farm' route:</p>
+    <pre><code>
+        <span class="red">on index.js (route to the form)</span>
+        app.get('/farms/new', (req, res) => {
+            res.render('farms/new');
+        })
+
+        <span class="red">on farms/new.ejs</span>
+        < h1>Add a Farm</>
+    < form action="/farms" method="POST">
+        < div>
+            < label for="name">Farm name: </>
+            < input type="text" name="name" id="name" placeholder="farm name">
+        < /div>
+        < div>
+            < label for="city">City: </>
+            < input type="text" name="city" id="city" placeholder="farm city">
+        < /div>
+        < div>
+            < label for="email">E-mail: </>
+            < input type="email" name="email" id="email" placeholder="farm email">
+        < /div>
+        
+        < button>Add farm</>
+    </ form>
+
+    <span class="red">on index.js (defining a post route)</span>
+        const Farm = require('./models/farm');
+        app.post('/farms', async (req, res) => {
+            const farm = new Farm(req.body);
+            await farm.save();
+            res.redirect('/farms')
+        })
+
+    <span class="red">'show all farms' route, on index.js</span>
+    app.get('/farms', async (req, res) => {
+        const farms = await Farm.find({});
+        res.render('farms/index', { farms });
+    })
+
+    <span class="red">on /farms/index.ejs</span>
+    < h1>
+        All Farms
+    </ h1>
+    < ul>
+        <% for(let farm of farms) { %>
+            < li><%= farm.name %></ li>
+            <% } %>
+    </ ul>
+</code></pre>
+
+<p>Creating a 'show' page for each farm:</p>
+<pre><code>
+    <span class="red">on index.js (this route must come after /farms/new, 
+    otherwise the app will read 'new' as an id!</span>
+    app.get('/farms/:id', async (req, res) => {
+        const farm = await Farm.findById(req.params.id);
+        res.render('farms/show', { farm });
+    })
+
+    <span class="red">on /farms/index.ejs (adding a link)</span>
+    < h1>
+        All Farms
+    </ h1>
+    < ul>
+        <% for(let farm of farms) { %>
+            < li>< a href="/farms/<%=farm._id%>"><%= farm.name %></></ li>
+            <% } %>
+    </ ul>
+
+    <span class="red">creating /farms/show.ejs</span>
+    < h1>
+        <%= farm.name %>
+    </ h1>
+    < ul>
+        < li>City: <%= farm.city %>
+        </ li>
+        < li>E-mail: <%= farm.email %>
+        </ li>
+    </ ul>
+    < a href="/farms">All Farms</ a>
+</code></pre>
+
+<p>Here begins the fresh new part of this section! How to create a new product from inside of a farm's view page, associating this product with that farm?</p>
+<p>The pattern we'll going to use is <b>/farms/:farm_id/products/new</b> for creating a new product, and <b>/farm/:farm_id/products/:id</b> to view that product.</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    app.get('/farms/:id/products/new', (req, res) => {
+        const { id } = req.params;
+        res.render('products/new', { categories, id })
+    })
+
+    <span class="red">on products/new.ejs
+        (change the path to the form to be submitted)
+    </span>
+    < form action="/farms/<%=id%>/products" method="POST">< /form>
+
+    <span class="red">on index.js (create post route)</span>
+    app.post('/farms/:id/products', async (req, res) => {
+        const { id } = req.params; <span class="red">req.params comes from the requested address (/farms/:id/products) </span>
+        const farm = await Farm.findById(id);
+        const { name, price, category } = req.body; <span class="red">req.body comes from the form that was submitted</span>
+        const product = new Product({ name, price, category });
+        farm.products.push(product); <span class="red">associates this product with this farm</span>
+        product.farm = farm; <span class="red">associates this farm with this product</span>
+        await farm.save();
+        await product.save();
+        res.redirect(`/farms/${id}`);
+    })
+    <span class="red">on /farms/show.ejs</span>
+    < a href="/farms/<%=farm.id%>/products/new">Add Product< /a>
+
+</code></pre>
+
+    <p>Showing products on each farm's show page:</p>
+    <pre><code>
+        <span class="red">populating product's ids on index.js</span>
+        app.get('/farms/:id', async (req, res) => {
+            const farm = await (await Farm.findById(req.params.id))<b>.populate('products')</b>;
+            res.render('farms/show', { farm });
+        })
+
+        <span class="red">on /farms/show.ejs</span>
+        < h2>Products:</ h2>
+    < ul>
+        <% for(let product of farm.products){%>
+        < li><%=product.name%>< /li>
+        <%}%>
+    < /ul>
+    </code></pre>
+
+    <p>Adding the farm name to 'new.ejs':</p>
+    <pre><code>
+        <span class="red">on index.js</span>
+        app.get('/farms/:id/products/new', async (req, res) => {
+            const { id } = req.params;
+            <b>const farm = await Farm.findById(id);</b>
+            res.render('products/new', { categories, <b>farm</b> })
+        })
+
+        <span class="red">on products/new.ejs</span>
+        < h1><b><%=farm.name%></b></ h1>
+    < h2>Add a Product</ h2>
+    < form action="/farms/<%=<b>farm._id</b>%>/products" method="POST">
+    </code></pre>
+
+    <p>Showing the farm name on each product's view:</p>
+    <pre><code>
+        <span class="red">on index.js</span>
+        app.get('/products/:id', async (req, res) => {
+            const { id } = req.params;
+            const product = await (await Product.findById(id))<b>.populate('farm', 'name')</b>;
+            res.render('products/show', { product });
+        })
+    </code></pre>
+
+    <p>Deleting one item from an array. Colt lecture 473. In order to delete just one item from an array in a property that accepts one array of items, we can use the keyword $pull in Mongo/Mongoose. The $pull operator in MongoDB removes from an existing array all instances of a value or values that match a specified condition:</p>
+    <pre><code>
+        app.delete('/campgrounds/:id/reviews/:reviewId', catchAsync(async (req, res) => {
+            const { id, reviewId } = req.params;
+            await Campground.findByIdAndUpdate(id, { $pull: { reviews: reviewId } }); <span class="red">deleting from the campgrounds collection</span>
+            await Review.findByIdAndDelete(reviewId); <span class="red">deleting from the reviews collection</span>
+            res.redirect(`/campgrounds/${id}`)
+        }))
+    </code></pre>
+
+    <p>Delete route: Mongoose Middleware. We not only want to delete a farm, we would like to delete also the products associated with that farm. In order to do that, we have to define a Mongoose Middleware (don't confuse with Express Middleware, which are defined on the routes script). Mongoose Middlewares are defined on the models script (see below).</p>
+    <pre><code>
+        <span class="red">on index.js</span>
+        app.delete('/farms/:id', async (req, res) => {
+            const farm = await Farm.findByIdAndDelete(req.params.id);
+            res.redirect('/farms');
+        })
+
+        <span class="red">on farms/show.ejs</span>
+        < form action="/farms/<%=farm._id%>?_method=DELETE" method="POST">< button>Delete< /button>< /form>
+
+        <span class="red">on /models/farm.js</span>
+        const Product = require('./product');
+        farmSchema.post('findOneAndDelete', async function (farm) {
+            if(farm.products.length) {
+                const res = await Product.deleteMany({_id: {$in: farm.products}});
+                console.log(res);
+            }
+        });
+    </code></pre>
+
+<h3>Express Router</h3>
+<p>À medida que as rotas de um sistema crescem, é uma boa prática separar essas rotas em arquivos, imagine 100 rotas no mesmo arquivo, dificulta muito a manutenção.</p>
+<p>Para fazer isso existe o express.Router, com ele é possível escrever todas as rotas relacionadas em um arquivo e depois exportar elas para que seja usado no arquivo principal, com isso as rotas de um módulo ficam separadas.</p>
+
+<pre><code>
+    <span class="red">on /routes/shelters.js</span>
+    const express = require('express');
+    const router = express.Router();
+
+    router.get('/shelters', (req, res) => {
+        res.send('ALL SHELTERS')
+    })
+
+    router.post('/shelters', (req, res) => {
+        res.send('CREATING A SHELTER')
+    })
+
+    router.get('/shelters/:id', (req, res) => {
+        res.send('VIEWING ONE SHELTER')
+    })
+
+    router.get('/shelters/:id/edit', (req, res) => {
+        res.send('EDITING ONE SHELTER')
+    })
+
+    module.exports = router;
+
+    <span class="red">on index.js (main script for routes)</span>
+    const express = require('express');
+    const app = express();
+    const <b>shelterRoutes</b> = require('./routes/shelters');
+
+    app.use('/', <b>shelterRoutes</b>);
+
+    app.listen(3000, () => {
+        console.log('Serving app on localhost:3000')
+    })
+</code></pre>
+
+<p>We can prefix the routes that begin with the same path:</p>
+
+<pre><code>
+    <span class="red">on /routes/shelters.js</span>
+    const express = require('express');
+    const router = express.Router();
+
+    router.get('/', (req, res) => {
+        res.send('ALL SHELTERS')
+    })
+
+    router.post('/', (req, res) => {
+        res.send('CREATING A SHELTER')
+    })
+
+    router.get('/:id', (req, res) => {
+        res.send('VIEWING ONE SHELTER')
+    })
+
+    router.get('/:id/edit', (req, res) => {
+        res.send('EDITING ONE SHELTER')
+    })
+
+    module.exports = router;
+
+    <span class="red">on index.js (main script for routes)</span>
+    const express = require('express');
+    const app = express();
+    const <b>shelterRoutes</b> = require('./routes/shelters');
+
+    app.use(<b>'/shelters', shelterRoutes</b>);
+
+    app.listen(3000, () => {
+        console.log('Serving app on localhost:3000')
+    })
+</code></pre>
+
+<h4>mergeParams</h4>
+<p>If we define a prefix that includes :id, in order to access req.params.id in the router, we have to add mergeParams option when calling Router function.</p>
+<pre><code>
+    <span class="red">on router .js</span>
+    const router = express.Router({ mergeParams: true });
+</code></pre>
+
+<h4>Express Router & Middleware</h4>
+<p>Middleware that are written or available inside of a router will only apply to this router's routes:</p>
+<pre><code>
+    <span class="red">on /routes/admin.js</span>
+    const express = require('express');
+    const router = express.Router();
+
+    router.use((req, res, next) => {
+        if (req.query.isAdmin) {
+            next();
+        }
+        res.send('SORRY NOT AN ADMIN!')
+    })
+
+    router.get('/topsecret', (req, res) => {
+        res.send('THIS IS TOP SECRET')
+    })
+
+    router.get('/deleteeverything', (req, res) => {
+        res.send('OK DELETED IT ALL!')
+    })
+
+    <span class="red">on index.js</span>
+    const adminRoutes = require('/routes/admin');
+    app.use('/admin', adminRoutes);
+</code></pre>
+
+<h3>Cookies</h3>
+<p>Cookies are little bits of information that are stored in a user's browser when browsing a particular website.</p>
+<p>Once a cookie is set, a user's browser will send the cookie on every subsequent request to the site.</p>
+<p>Cookies allow we to make HTTP stateful. Cookies are not used to store data, but for set a statefulness in the browser.</p>
+
+<h4>Sending cookies</h4>
+<pre><code>
+    const express = require('express');
+    const app = express();
+
+    app.get('/greet', (req, res) => {
+        res.send('hey there!')
+    })
+
+    app.get('/setname', (req, res) => {
+        res.cookie('name', 'henrietta');
+        res.send('OK, sent you a cookie!')
+    })
+    <span class="red">this route will set a cookie with key 'name' and value 'henrietta'</span>
+
+    app.listen(3000, () => {
+        console.log('SERVING!')
+    })
+</code></pre>
+
+<h4>Parsing cookies: cookie parser middleware</h4>
+<p>Once we have set cookies, whenever that user sends a request, the cookies object will be sent along with the request. In order to handle these cookies, in Express we have to install and require 'cookie-parser'. After routing <b>app.use(cookieParser())</b>, the property <b>req.cookies</b> will be available on all script as a JS object.</p>
+<pre><code>
+    <span class="red">on Terminal</span>
+    npm i cookie-parser
+
+    <span class="red">on index.js</span>
+    const cookieParser = require('cookie-parser');
+    app.use(cookieParser());
+
+    app.get('/setname', (req, res) => {
+        res.cookie('name', 'henrietta');
+        res.send('OK, sent you a cookie!')
+    })
+
+    app.get('/greet', (req, res) => {
+        const { name = 'anonymous' } = req.cookies;
+        res.send(`Hey there, ${name}!`);
+    })
+</code></pre>
+
+<h4>Signing cookies</h4>
+<p>After the server sends a cookie to a client, the client might modify the cookie before sending it back to the server in a future request. Sometimes this is harmless, sometimes it can be required by the application, but sometimes it is important that the cookie sent by the client is unchanged from its original server-defined value. (Imagine a cookie that contains a username or a bank account number or a monetary amount or a game score. Tampering with those could breach server security or allow some sort of theft or cheating.)
+<br>
+If the server needs to be able to detect that a cookie has not been changed by the client, the server can include a signature as part of the cookie, along with the actual cookie data that needs to be protected. The signature is derived from the cookie data and from a secret that is known only to the server. The secret makes it very difficult for a client that modifies the data to produce the correct signature to go along the modified data. A cookie with this kind of signature is what the cookie-parser module calls a signed cookie.
+<br>
+When a signed cookie is sent back to the server, the server can verify that the signature and the data in the cookie match each other. If they match then the server can be confident that the data is genuine. If they don't match then the server knows that the cookie has been modified by the client and the server can reject the request.
+<br>    
+So, you would use a signed cookie if you want assurance that the data being returned in the cookie has not been modified by the client. If the data in the cookie is not valuable and you don't care if it gets modified by the client, or if you have arranged to use some alternative mechanism to validate the contents of the cookie, then you don't need to use a signed cookie.
+<br>
+Note that simply signing cookies does not defend against all of the ways a client might try to trick a server. In particular, signing does not defend against replay attacks. Also note that it's a really bad idea for a server to send sensitive data to a client at all. The example I gave of putting a bank account number into a cookie was just to illustrate the concept. That's not something that a real web application should do.</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    app.use(cookieParser(<b>'thisismysecret'</b>)); <span class="red">specifying a secret</span>
+    
+    app.get('/setsignedcookie', (req, res) => {
+        res.cookie('fruit', 'grape',<b> { signed: true }</b>);<span class="red">sending a signed cookie</span>
+        res.send('Ok signed your fruit cookie')
+    })
+
+    app.get('verifyfruit', (req, res) => {
+        res.send(<b>req.signedCookies</b>);
+    })
+</code></pre>
+
+<h3>Sessions</h3>
+<p>It's not very practical (or secure) to store a lot of data client-side using cookies. This is where sessions come in!</p>
+<p>Sessions are a server-side data store that we use to make HTTP stateful. Instead of storing data using cookies, we store the data on the server-side and then send the browser a cookie that can be used to retrieve the data.</p>
+<p>In Express, we can work with sessions by using the 'express-session' package. It will send on each response a cookie with a property called <b>connect.sid</b> (session ID), which will identify this session. The object <b>req.session</b> will also be available.</p>
+<pre><code>
+    <span class="red">on Terminal</span>
+    npm i express-session
+    
+    <span class="red">on index.js</span>
+    const session = require('express-session');
+
+    app.use(session({secret: 'thisisnotagoodsecret'}));
+
+    app.('/viewcount' (req, res) => {
+        if (req.session.count) {
+            req.session.count += 1;
+        } else {
+            req.session.count = 1;
+        }
+        res.send(`YOU HAVE VIEWED THIS PAGE ${req.session.count} TIMES`)
+    })
+</code></pre>
+
+<p>Setting session options:</p>
+<pre><code>
+    const sessionOptions = { secret: 'thisisnotagoodsecret', resave: false, saveUninitialized: false };
+    <span class="red">set resave and saveUninitialized like this if you get any deprecation warning</span>
+    app.use(session(sessionOptions));
+</code></pre>
+
+<h3>Flash messages</h3>
+<p>The flash is a special area of the session used for storing messages. Messages are written to the flash and cleared after being displayed to the user. The flash is typically used in combination with redirects, ensuring that the message is available to the next page that is to be rendered.</p>
+<p>Flash messages are stored in the session. First, setup sessions as usual by enabling cookieParser and session middleware. Then, use flash middleware provided by connect-flash.</p>
+<pre><code>
+    <span class="red">on Terminal</span>
+    npm i connect-flash
+
+    <span class="red">on index.js</span>
+    const session = require('express-session');
+    const flash = require('connect-flash');
+
+    const sessionOptions = { secret: 'thisisnotagoodsecret', resave: false, saveUninitialized: false };
+    app.use(session(sessionOptions));
+    app.use(flash());
+</code></pre>
+<p>With the flash middleware in place, all requests will have a req.flash() function that can be used for flash messages.</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    app.post('/farms', async (req, res) => {
+        const farm = new Farm(req.body);
+        await farm.save();
+        <b>req.flash('success', 'Successfully made a new farm!');</b>
+        res.redirect('/farms')
+    })
+
+    app.get('/farms', async (req, res) => {
+        const farms = await Farm.find({});
+        res.render('farms/index', { farms,<b> messages: req.flash('success') </b>});
+    })
+
+    <span class="red">on index.ejs (the template for the redirect target)</span>
+    <%= messages %>
+    < h1>
+        All Farms
+    </ h1>
+</code></pre>
+
+<h4>Creating a middleware to make things easier</h4>
+<p>In order to simplify the passing-through of flash messages, we can create a middleware that uses res.locals, which is a property available on every response.</p>
+<p>This middleware allows us to avoid writing <b>messages: req.flash('success')</b> everytime we have to pass a message to a template. By using this middleware, we can pass only the variable <b>messages</b>.</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    app.use((req, res, next) => {
+        res.locals.messages = req.flash('success');
+        next();
+    })
+
+    app.get('/farms', async (req, res) => {
+        const farms = await Farm.find({});
+        res.render('farms/index', { 'farms' })
+    }) <span class="red">now I don't have to pass messages anymore; messages will be available on every response</span>
+
+    <span class="red">on index.ejs (the template for the redirect target)</span>
+    <%= messages %> <span class="red">same as before!</span>
+    < h1>
+        All Farms
+    </ h1>
+</code></pre>
+
+<h3>Authentication</h3>
+<p>Here is what we need to learn authentication from scratch. But in practice, what we actually to is to make use of a package called 'Passport'.</p>
+
+<h4>Authentication vs. Authorization</h4>
+<p><b>Authentication</b> is the process of verifying who a particular user is. We typically authenticate with a username/password combo, but we can also use security questions, fingerprints, facial recognition, etc.</p>
+<p><b>Authorization</b> is verifying what a specific user has access to. Generally, we authorize after a user has been authenticated: "now that we know who you are, here is what you are allowed to do and NOT allowed to do".</p>
+
+<h4>How to (not) store passwords</h4>
+<ol>
+    <li>Never store passwords in db. SOLUTION: Hashing. Rather than storing a password in the database, we run the password through a <b>hashing function</b> first and then store the result in the database. Hashing functions are functions that map input data of some arbitrary size to fixed-size output values.</li>
+</ol>
+
+<h4>Cryptographic Hashing Functions</h4>
+<ul>
+    <li>One-way function which is infeasible to invert</li>
+    <li>Small change in output yields large change in the output</li>
+    <li>Deterministic - same input yields same output</li>
+    <li>Unlikely to find 2 outputs with same value</li>
+    <li>Password Hash Functions are deliberately SLOW</li>
+</ul>
+
+<h4>Salts: an extra safeguard</h4>
+<p>Salting is an extra step to avoid reverse-engineering of our passwords.</p>
+<p>A salt is a random value added to the password before we hash it. It helps ensure unique hashes and mitigate common attacks.</p>
+
+<h4>Bcrypt: our hash function!</h4>
+<p>After installing Bcrypt (npm i bcrypt), these are some methods that are frequently used:</p>
+<pre><code>
+    const bcrypt = require('bcrypt');
+
+    const hashPassword = async (pw) => {
+        const salt = await bcrypt.genSalt(12);
+        const hash = await bcrypt.hash(pw, salt);
+        console.log(salt);
+        console.log(hash);
+    }
+    <span class="red"><b>12</b> is the number of rounds taken to generate the salt;
+    the more rounds, the more difficult to hack. 12 is a good number, too high numbers will increase significantly the amount of delay</span>
+    hashPassword('monkey');
+</code></pre>
+<p>We can also generate the salt and hash the password in one single step:</p>
+<pre><code>
+    const hashPassword = async (pw) => {
+        const hash = await bcrypt.hash(pw, 12);
+        console.log(hash);
+    }
+    hashPassword('monkey');
+</code></pre>
+<p>Comparing a plain password from input to a hashed password:</p>
+<pre><code>
+    const login = async (pw, hashedPw) => {
+        const result = await bcrypt.compare(pw, hashedPw);
+        if (result) {
+            console.log('SUCCESSFULLY LOGGED IN!')
+        } else {
+            console.log('TRY AGAIN!')
+        }
+    }
+    login('monkey', '478378y73ghdu3hbduoi2nbud3ou2dnil2u39h298');
+</code></pre>
+
+<h4>Writing auth from scratch</h4>
+<p>1. Setup</p>
+<pre><code>
+    <span class="red">on models/user.js</span>
+    const mongoose = require('mongoose');
+
+    const userSchema = new mongoose.Schema({
+        username: {
+            type: String,
+            required: [true, 'Username cannot be blank']
+        },
+        password: {
+            type: String, <span class="red">hashed password!</span>
+            required: [true, 'Password cannot be blank']
+    });
+
+    module.exports = mongoose.model('User', userSchema);
+
+    <span class="red">on index.js</span>
+    const express = require('express');
+    const app = express();
+    const User = require('./models/user')
+
+    app.set('view engine', 'ejs');
+    app.set('views', 'views');
+
+    app.get('/register', (req, res) => {
+        res.render('register');
+    })
+
+    app.get('/secret', (req, res) => {
+        res.send('THIS IS SECRET! You cannot see me unless you are logged in.')
+    })
+
+    app.listen(3000, () => {
+        console.log('SERVING YOUR APP!')
+    })
+
+    <span class="red">on register.ejs</span>
+    < h1>Sign up form</>
+    < form action="">
+        < div>
+            < label for="username">Enter username: < form /label>
+            < input type="text" name="username" id="username" placeholder="username">
+        </ div>
+        < div>
+            < label for="password">Enter password: < /label>
+            < input type="password" name="password" id="password" placeholder="password">
+        < /div>
+        < button>Sign up< /button>
+    < /form>
+</code></pre>
+<p>2. Registering (saving new user to db)</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    const mongoose = require('mongoose');
+    const bcrypt = require('bcrypt');
+    
+    mongoose.connect('mongodb://localhost:27017/authDemo')
+        .then(() => {
+            console.log('Mongo connection open!');
+        })
+        .catch(() => {
+            console.log('Mongo connection error!');
+            console.log(err);
+        })
+
+    app.use(express.urlencoded({ extended: true }));
+    <span class="red">(parse the req.body from post requests)</span>
+    
+    app.post('/register', async (req, res) => {
+        <b>const { password, username } = req.body;
+        const hash = await bcrypt.hash(password, 12);
+        const user = new User({
+            username,
+            password: hash
+        });
+        await user.save();
+        res.redirect('/');
+        </b>
+    })
+
+    app.get('/', (req, res) => {
+        res.send('This is the home page');
+    })
+
+    <span class="red">on register.ejs</span>
+    < form action="/register" method="POST">< /form>
+</code></pre>
+<p>3. Login (comparing input to stored hashed password):</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    app.get('/login', (req, res) => {
+        res.render('login')
+    })
+
+    app.post('/login', async (req, res) => {
+        const { username, password } = req.body;
+        const user = await User.findOne({ username: username });
+        const validPassword = bcrypt.compare(password, user.password);
+        if(validPassword){
+            res.send('WELCOME!');
+        } else {
+            res.send('TRY AGAIN!');
+        }
+    })
+
+    <span class="red">on login.ejs</span>
+    < h1>Login</>
+    < form action="/login" method="POST"><span class="red">use POST in order to avoid sending password as a query-string</span>
+        < div>
+            < label for="username">Enter username: < form /label>
+            < input type="text" name="username" id="username" placeholder="username">
+        </ div>
+        < div>
+            < label for="password">Enter password: < /label>
+            < input type="password" name="password" id="password" placeholder="password">
+        < /div>
+        < button>Sign up< /button>
+    < /form>
+</code></pre>
+
+<p>4. Staying logged in with session</p>
+<pre><code>
+    <span class="red">on Terminal</span>
+    npm i express-session
+
+    <span class="red">on index.js</span>
+    const session = require('express-session');
+    app.use(session({ secret: 'notagoodsecret' }));
+
+    app.post('/login', async (req, res) => {
+        const { username, password } = req.body;
+        const user = await User.findOne({ username: username });
+        const validPassword = bcrypt.compare(password, user.password);
+        if(validPassword){
+            <b>req.session.user_id = user._id;</b>
+            res.send('WELCOME!');
+        } else {
+            res.send('TRY AGAIN!');
+        }
+    })
+
+    app.post('/register', async (req, res) => {
+        const { password, username } = req.body;
+        const hash = await bcrypt.hash(password, 12);
+        const user = new User({
+            username,
+            password: hash
+        });
+        await user.save();
+        <b>req.session.user_id = user._id;</b>
+        res.redirect('/');
+    })
+
+    app.get('/secret', (req, res) => {
+        <b>if(!req.session.user_id){
+            res.redirect('/login');
+        }</b>
+        res.send('THIS IS SECRET! You cannot see me unless you are logged in.')
+    }) <span class="red">only logged users have access to '/secret'</span>
+</code></pre>
+
+<p>5. Implementing log-out functionality:</p>
+<p>All that is needed to do is to remove user_id off the session, setting it to null.</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    app.post('/logout', (req, res) => {
+        req.session.user_id = null;
+        res.redirect('/login');
+    })
+
+    <span class="red">alternative way: destroying session:</span>
+    app.post('/logout', (req, res) => {
+        req.session.destroy();
+        res.redirect('/login');
+    })
+
+    <span class="red">on other pages</span>
+    < form action="/logout" method="POST">
+        < button>Sign Out< /button>
+    < /form>
+</code></pre>
+
+<p>EXTRA: a middleware to require login</p>
+<pre><code>
+    <span class="red">on index.js</span>
+    const requireLogin = (req, res, next) => {
+        if(!req.session.user_id) {
+            return res.redirect('/login');
+        }
+        next();
+    }
+
+    app.get('/secret', requireLogin, (req, res) => {
+        res.send('THIS IS SECRET! You cannot see me unless you are logged in.')
+    }) 
+</code></pre>
+
+<p>EXTRA2: adding an authentication method to the User model</p>
+<pre><code>
+    <span class="red">on models/user.js</span>
+    const bcrypt = require('bcrypt');
+    
+    const userSchema = new mongoose.Schema({
+        username: {
+            type: String,
+            required: [true, 'Username cannot be blank']
+        },
+        password: {
+            type: String,
+            required: [true, 'Password cannot be blank']
+    });
+
+    userSchema.statics.findAndValidate = async function(username, password) {
+        const foundUser = await this.findOne({ username });
+        const isValid = await bcrypt.compare(password, foundUser.password);
+        return isValid ? foundUser : false;
+    }
+
+    <span class="red">on index.js</span>
+    app.post('/login', async (req, res) => {
+        const { username, password } = req.body;
+        const foundUser = await User.findAndValidate(username, password);
+        if(foundUser){
+            req.session.user_id = foundUser._id;
+            res.send('WELCOME!');
+        } else {
+            res.send('TRY AGAIN!');
+        }
+    })
+</code></pre>
+
+<p>EXTRA2: adding an hash-password method to the User model</p>
+<p>This middleware will hash a password before a new user is saved to the database.</p>
+<pre><code>
+    <span class="red">on models/user.js</span>
+    userSchema.pre('save', async function(next) {
+        if(!this.isModified('password')) return next(); <span class="red">if the pw hasn't been modified, then next.</span>
+        this.password = await bcrypt.hash(this.password, 12);
+        next();
+    })
+
+    <span class="red">on index.js</span>
+    app.post('/register', async (req, res) => {
+        const { password, username } = req.body;
+        const user = new User({ username, password });
+        await user.save();
+        req.session.user_id = user._id;
+        res.redirect('/');
+    })
+</code></pre>
+
+<h3>Authentication using Passport</h3>
+<p>It is important to know how to make auth from scratch, in order to understand each step that it envolves. But in real life we usually use packeges like Passport, which "hide" parts of this process and make it more simple. Colt Section 51, lecture 509. Working on Yelpcamp project.</p>
+<pre><code>
+    <span class="red">on Terminal</span>
+    npm i passport passport-local passport-local-mongoose 
+
+    <span class="red">on models/user.js</span>
+    const mongoose = require('mongoose');
+    const Schema = mongoose.Schema;
+    const passportLocalMongoose = require('passport-local-mongoose');
+
+    const UserSchema = new Schema({
+        email: {
+            type: String,
+            required: true,
+            unique: true
+        }
+    });
+
+    UserSchema.plugin(passportLocalMongoose);
+    <span class="red">it's not necessary to define username or password, 
+    because connecting to Passport will create them for us.
+    </span>
+
+    module.exports = mongoose.model('User', UserSchema);
+</code></pre>
+
+<p>Configuring Passport in app.js:</p>
+<pre><code>
+    <span class="red">on app.js</span>
+    const passport = require('passport');
+    const localStrategy = require('passport-local');
+    const User = require('./models/user');
+
+    app.use(passport.initialize());
+    app.use(passport.session());
+    <span class="red">passport.session() must be called after we call the regular app.use(session('secret')</span>
+    passport.use(new localStrategy(User.authenticate()));
+    
+    passport.serializeUser(User.serializeUser());
+    passport.deserializeUser(User.deserializeUser());
+    <span class="red">these ones tell how Passport will add/remove user from session</span>
+
+    <span class="red">hardcoding a new user:</span>
+    app.get('/fakeUser', async (req, res) => {
+        const user = new User({ email: 'colttt@gmail.com', username: 'colttt' });
+        <span class="red">don't pass pw here</span>
+        const newUser = await User.register(user, 'chicken'); <span class="red">the pw is 'chicken'</span>
+        res.send(newUser);
+    })
+</code></pre>
+<p>Registering a user with Passport:</p>
+<pre><code>
+    <span class="red">on routes/user.js</span>
+    const express = require('express');
+    const router = express.Router();
+    const passport = require('passport');
+    const catchAsync = require('../utils/catchAsync');
+    const User = require('../models/user');
+
+    router.get('/register', (req, res) => {
+        res.render('users/register');
+    });
+
+    router.post('/register', catchAsync(async(req, res) => {
+        try {
+        const { email, username, password } = req.body;
+        const user = new User({email, username});
+        const registeredUser = await User.register(user, password);
+        req.flash('success', 'Welcome to Yelp Camp!');
+        res.redirect('/campgrounds');
+        } catch(e) {
+            req.flash('error', e.message);
+            res.redirect('register');
+        }
+    }));
+
+    module.exports = router;
+
+    <span class="red">on views/users/register.ejs</span>
+    <% layout('layouts/boilerplate') %>
+
+    < h1>Register< /h1>
+    < form action="/register" method="POST" class="validated-form" novalidate>
+        < div class="mb-3">
+            < label class="form-lable" for="username">Username: < /label>
+            < input class="form-control" type="text" name="username" id="username" required>
+            < div class="valid-feedback">Looks good!< /div>
+        < /div>
+        < div class="mb-3">
+            < label class="form-lable" for="email">E-mail: < /label>
+            < input class="form-control" type="email" name="email" id="email" required>
+            < div class="valid-feedback">Looks good!< /div>
+        < /div>
+        < div class="mb-3">
+            < label class="form-lable" for="password">Password: < /label>
+            < input class="form-control" type="password" name="password" id="password" required>
+            < div class="valid-feedback">Looks good!< /div>
+        < /div>
+        < button class="btn btn-success">Register< /button>
+    < /form>
+</code></pre>
+
+<p>Login with Passport:</p>
+<pre><code>
+    <span class="red">on routes/user.js</span>
+    router.get('/login', (req, res) => {
+        res.render('users/login')
+    })
+    
+    router.post('/login', passport.authenticate('local', { failureFlash: true, failureRedirect: '/login' }), (req, res) => {
+        req.flash('success', 'Welcome back!');
+        res.redirect('/campgrounds');
+    })
+
+    <span class="red">on views/users/login.ejs</span>
+    <% layout('layouts/boilerplate') %>
+
+    < h1>Login< /h1>
+    < form action="/login" method="POST" class="validated-form" novalidate>
+        < div class="mb-3">
+            < label class="form-lable" for="username">Username: < /label>
+            < input class="form-control" type="text" name="username" id="username" required>
+            < div class="valid-feedback">Looks good!< /div>
+        < /div>
+        
+        < div class="mb-3">
+            < label class="form-lable" for="password">Password: < /label>
+            < input class="form-control" type="password" name="password" id="password" required>
+            < div class="valid-feedback">Looks good!< /div>
+        < /div>
+        < button class="btn btn-success">Login< /button>
+    < /form>
+</code></pre>
+
+<p>3. isLoggedIn Middleware. We can create a middleware that uses the <b>isAuthenticated()</b> method (of Passport) to see if an user is logged in before letting him in; if not, redirect him to login page.</p>
+<pre><code>
+    <span class="red">on middleware.js</span>
+    module.exports.isLoggedIn = (req, res, next) => {
+        if (!req.isAuthenticated()) {
+            req.flash('error', 'You must be signed in!');
+            return res.redirect('/login');
+        }
+        next();
+    }
+
+    <span class="red">on routes/campgrounds.js</span>
+    const { isLoggedIn } = require('../middleware');
+
+    router.get('/new', isLoggedIn, (req, res) => {
+        res.render('campgrounds/new');
+    })
+
+</code></pre>
+
+<p>4. Logging out user.</p>
+<p>Passport contains a method called req.logout() that accepts a callback function to handle errors.</p>
+<pre><code>
+    <span class="red">on users.js</span>
+    router.get('/logout', (req, res, next) => {
+        req.logout(function(err) {
+          if (err) { return next(err); }
+          req.flash('success', "Goodbye!");
+          res.redirect('/campgrounds');
+        });
+      }); 
+
+      <span class="red">adding a link on layouts/navbar.ejs</span>
+      < div class="navbar-nav ms-auto">
+        < a href="/login" class="nav-link">Login< /a>
+        < a href="/register" class="nav-link">Register< /a>
+        < a href="/logout" class="nav-link">Logout< /a>
+      < /div>
+</code></pre>
+
+<p>5. currentUser helper</p>
+<p>In order to see the username of the logged user, Passport provides a req.user property on the req object.</p>
+<pre><code>
+    <span class="red">on app.js</span>
+    app.use((req, res, next) => {
+        <b>res.locals.currentUser = req.user;</b>
+        res.locals.success = req.flash('success');
+        res.locals.error = req.flash('error');
+        next();
+    })
+    <span class="red">res.locals is used to define info that we want to be available on every template we go</span>
+
+    <span class="red">adjusting layouts/navbar.ejs to only show logout if the user is logged in and vice-versa</span>
+    <div class="navbar-nav ms-auto">
+        <% if(!currentUser) { %>
+        < a href="/login" class="nav-link">Login< /a>
+        < a href="/register" class="nav-link">Register< /a>
+        <% } else { %>
+        < a href="/logout" class="nav-link">Logout< /a>
+        <% } %>
+      < /div>
+</code></pre>
+
+<p>6. Automatically logging in when user registers:</p>
+<p>Here we can make use of the Passport method <b>login()</b>, which also requires a catch error callback function.</p>
+<p>What's the difference between <b>passport.authenticate()</b> and <b>req.login()</b>? The first will <i>compare</i> a provided pw with the hashed pw on out db; the second will login an user that was just created.</p>
+<pre><code>
+    <span class="red">on routes/users.js</span>
+    router.post('/register', catchAsync(async(req, res, next) => {
+        try {
+        const { email, username, password } = req.body;
+        const user = new User({email, username});
+        const registeredUser = await User.register(user, password);
+        <b>req.login(registeredUser, err => {
+            if(err) return next(err);
+            req.flash('success', 'Welcome to Yelp Camp!');
+            res.redirect('/campgrounds');
+        })</b>
+        } catch(e) {
+            req.flash('error', e.message);
+            res.redirect('register');
+        }
+    }));
+</code></pre>
+
+<p>7. Returning to the page that the user originally wanted to go, after login:</p>
+<pre><code>
+    <span class="red">on middleware.js</span>
+    module.exports.isLoggedIn = (req, res, next) => {
+        if (!req.isAuthenticated()) {
+            <b>req.session.returnTo = req.originalUrl;</b>
+            req.flash('error', 'You must be signed in!');
+            return res.redirect('/login');
+        }
+        next();
+    }
+
+    <span class="red">on routers/users.js</span>
+    router.post('/login', passport.authenticate('local', { failureFlash: true, failureRedirect: '/login', <b>keepSessionInfo: true</b> }), (req, res) => {
+        req.flash('success', 'Welcome back!');
+        <b>const redirectUrl = req.session.returnTo || '/campgrounds';
+        delete req.session.returnTo;
+        res.redirect(redirectUrl);</b>
+    })
+</code></pre>
+
+<h3>Authorization using Passport</h3>
+<p>Authorization will allow us to associate each item (new campground, review etc) to a specific user (author); only this user will be allowed to edit or delete these items. Colt section 52, lecture 520, working on Yelpcamp project.</p>
+
+<p>1. Adding an author to campgrounds</p>
+<pre><code>
+    <span class="red">on models/campground.js</span>
+    const CampgroundSchema = new Schema({
+        title: String,
+        image: String,
+        price: Number,
+        description: String,
+        location: String,
+        <b>author: {
+            type: Schema.Types.ObjectId,
+            ref: 'User'
+        },</b>
+        reviews: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: 'Review'
+            }
+        ]
+    });
+</code></pre>
+
+<p>2. Re-seeding the database, so that every campground has an author:</p>
+<pre><code>
+    <span class="red">on seeds/index.js</span>
+    const seedDB = async() =>{
+        await Campground.deleteMany({});
+        for(let i = 0; i < 50; i++){
+            const random1000 = Math.floor(Math.random() * 1000);
+            const price = Math.floor(Math.random() * 20) + 10;
+            const camp = new Campground({ 
+                <b>author: '632258fd8d8c482a706a8c71',</b>
+                location: `${cities[random1000].city}, ${cities[random1000].state}`, title: `${sample(descriptors)} ${sample(places)}`, 
+                image: 'https://source.unsplash.com/collection/483251', 
+                description: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Accusantium vero qui dolorum eius voluptate ipsam tenetur corporis, veniam, tempora quaerat voluptas ducimus? Necessitatibus molestias totam magnam officiis, dolorem quaerat debitis.', 
+                price: price})
+            await camp.save();
+        };
+    }
+    <span class="red">that is the _id of user <b>gloriagroove</b></span>
+</code></pre>
+
+<p>3. Showing the author on campground's details page template:</p>
+<pre><code>
+    <span class="red">on routes/campgrounds.js</span>
+    router.get('/:id', catchAsync(async (req, res) => {
+        const campground = await (await Campground.findById(req.params.id).populate('reviews'))<b>.populate('author');</b>
+        if(!campground){
+            req.flash('error', 'Sorry, campground not found');
+            return res.redirect('/campgrounds');
+        }
+        res.render('campgrounds/show', {campground})
+    }))
+
+    <span class="red">on show.ejs</span>
+        < li class="list-group-item text-muted"><%= campground.location %>< /li>
+        <b>< li class="list-group-item">Submitted by <%= campground.author.username %>< /li></b>
+        < li class="list-group-item">$<%= campground.price%>/night< /li>
+
+    <span class="red">on routes/campgrounds.js (defining the author of a new campground)</span>
+    router.post('/', isLoggedIn, validateCampground, catchAsync(async (req, res, next) => {
+        const campground = new Campground(req.body.campground);
+        <b>campground.author = req.user._id;</b>
+        await campground.save();
+        req.flash('success', 'Successfully made a new campground!');
+        res.redirect(`/campgrounds/${campground._id}`);
+    }))
+</code></pre>
+
+<p>4. Showing/hiding the Edit and Delete buttons (so that only the author can edit and delete his own items):</p>
+<pre><code>
+    <span class="red">on show.ejs</span>
+    <% if(currentUser && campground.author.equals(currentUser)) { %>
+        < div class="card-body">
+            < a href="/campgrounds/<%=campground._id%>/edit" class="card-link btn btn-info">Edit< /a>
+            < form class="d-inline" action="/campgrounds/<%=campground._id%>?_method=DELETE" method="POST">
+                < button class="btn btn-danger">Delete< /button>
+            < /form>
+        < /div>
+        <% } %>
+
+    <span class="red">to prevent the users to make prohibited changes using put/delete requests, we have to protect the routes on routes/campgrounds.js</span>
+    router.put('/:id', isLoggedIn,validateCampground, catchAsync(async (req, res) => {
+        const { id } = req.params;
+        <b>const campground = await Campground.findById(id);
+        if(!campground.author.equals(req.user._id)) {
+            req.flash('error', 'You do not have permission to do that.');
+            return res.redirect(`/campgrounds/${id}`);
+        }</b>
+        const camp = await Campground.findByIdAndUpdate(id, { ...req.body.campground });
+        req.flash('success', 'Successfully updated campground');
+        res.redirect(`/campgrounds/${campground._id}`)
+    }))
+
+    <span class="red">in order to add this code to other routes, it's better to create a middleware:</span>
+    const isAuthor = async (req, res, next) => {
+        const { id } = req.params;
+        const campground = await Campground.findById(id);
+        if (!campground.author.equals(req.user._id)) {
+            req.flash('error', 'You do not have permission to do that.');
+            return res.redirect(`/campgrounds/${id}`);
+        }
+    }
+
+    <span class="red">it's always good to put all middlewares in middleware.js file, so that the routes files stays clean.</span>
+
+</code></pre>
+
+<h3>Refactoring our routes: MVC Architecture Pattern</h3>
+<p>MVC (Model-View-Controller) is an architecture pattern that is largely used in medium/large scale apps.</p>
+<p>Up to this point, we already have the Models folder (with the Schemas and its models) and the Views folder (with all .ejs view files).</p>
+<p>For the sake of organization and cleaness, now we are going to create a Controllers folder, where we will store the core functions of our routes. Then the routes will only have to require and call these functions.</p>
+<pre><code>
+    <span class="red">on routes/campgrounds.js</span>
+    const campgrounds = require('../controllers/campgrounds');
+
+    router.get('/', catchAsync(campgrounds.index));
+    <span class="red">'index' is a function (method) found on the campgrounds object, that was imported from ../controllers/campgrounds.js</span>
+
+    <span class="red">on controllers/campgrounds.js</span>
+    const Campground = require('../models/campground');
+
+    module.exports.index = async (req, res) => {
+        const campgrounds = await Campground.find({});
+        res.render('campgrounds/index', { campgrounds })
+    }
+</code></pre>
+<p>To refactor our routes, we do the above process to each and every route. Always remember to require in the controller all of the methods/objects/scripts that each of the functions uses.</p>
+
+<h3>Refactoring our routes II: router.route(< path >)</h3>
+<p>We can use <b>router.route(path)</b> to compile all routes that target the same path. For example:</p>
+<pre><code>
+    <span class="red">on routes/campgrounds.js, BEFORE:</span>
+    router.get('/', catchAsync(campgrounds.index));
+
+    router.post('/', isLoggedIn, validateCampground, catchAsync(campgrounds.createCampground))
+
+    <span class="red">AFTER:</span>
+    router.route('/')
+        .get(catchAsync(campgrounds.index))
+        .post(isLoggedIn, validateCampground, catchAsync(campgrounds.createCampground));
+</code></pre>
+
+<h3>Image upload</h3>
+<p>Up to this point, all of our req.body objects are coming parsed into url. This is because we originally set on app.js the following route: <b>app.use(express.urlencoded({extended: true}));</b>.</p>
+<p>So, the first thing that we have to do is change the encoding type in the form html-element in which our image upload input will be written: </p>
+<pre><code>
+    <span class="red">on views/campgrounds/new.ejs</span>
+    < form action="/campgrounds" method="POST" novalidate class="validated-form" <b>enctype="multipart/form-data"</b>>< /form>
+
+    < input type="file" name="image" id="">
+    <span class="red">this will create a "choose file" input on our form</span>
+</code></pre>
+
+<p>In order to parse the <b>multipart</b> req.body, we have to install and require a middleware called <b>Multer</b>.</p>
+<p>Multer adds a body object and a file or files object to the request object. The body object contains the values of the text fields of the form, the file or files object contains the files uploaded via the form. Multer Docs: https://github.com/expressjs/multer</p>
+<pre><code>
+    <span class="red">on Terminal</span>
+    npm i multer 
+
+    <span class="red">on routes/campgrounds.js</span>
+    const multer = require('multer');
+    const upload = multer({ dest: 'uploads/' });
+
+    .post(upload.single('image'), (req, res) => {
+        console.log(req.body, req.file)
+    })
+</code></pre>
+<p>Through upload.single('name_of_input'), Multer will parse one <b>req.file</b> for the image file, and one <b>req.body</b> for the rest of the information from that form (other fields like location, title, price, description, etc.)</p>
+<p>In order to upload multiple files at once, wo to as follows:</p>
+<pre><code>
+    <span class="red">on views/campgrounds/new.ejs</span>
+    < form action="/campgrounds" method="POST" novalidate class="validated-form" enctype="multipart/form-data" <b>multiple</b>>< /form>
+
+    <span class="red">on routes/campgrounds.js</span>
+    const multer = require('multer');
+    const upload = multer({ dest: 'uploads/' });
+
+    .post(upload.<b>array</b>('image'), (req, res) => {
+        console.log(req.body, <b>req.files</b>)
+    })
+</code></pre>
+<p>Next up, in order to store our image files on the cloud, we can create a Cloudinary account. We will receive an unique API key, then to handle this API key in our app we must use <b>.env</b> files and a package called <b>dovenv</b> to handle them. </p>
+<p>So, first, create a .env file in your project's root.</p>
+<pre><code>
+    <span class="red">on Terminal</span>
+    npm i dotenv 
+
+    <span class="red">on .env</span>
+    API_KEY=763782yehg8yhdoyuhoe87272
+
+    <span class="red">on top of app.js</span>
+    if (process.env.NODE_ENV !== 'production') {
+        require('dotenv').config();
+    }
+    <span class="red">this will handle .env files while we are on development stage. 
+    later on we will learn how to handle this information on production stage.
+    </span>
+    <span class="red">* now the information stored on .env is available in our environment, for example:
+        console.log(process.env.API_KEY);
+    </span>
+</code></pre>
+<P>Now, in order to store files on Cloudinary directly from our forms, we'll use a tool called <b>multer-storage-cloudinary</b>.</P>
+<pre><code>
+    <span class="red">on Terminal</span>
+    npm i cloudinary multer-storage-cloudinary 
+
+    <span class="red">create a 'cloudinary' folder</span>
+    
+    <span class="red">on cloudinary/index.js</span>
+    const cloudinary = require('cloudinary').v2;
+    const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
+    cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_KEY,
+        api_secret: process.env.CLOUDINARY_SECRET
+    });
+
+    const storage = new CloudinaryStorage({
+        cloudinary,
+        folder: 'YelpCamp',
+        <span class="red">this is the name of the folder on Cloudinary Cloud</span>
+        allowedFormats: ['jpeg', 'png', 'jpg']
+    })
+
+    module.exports = {
+        cloudinary,
+        storage
+    }
+
+    <span class="red">on routes/campgrounds.js</span>
+    const { storage } = require('../cloudinary');
+    const upload = multer({ storage });
+    <span class="red">change where the img files are stored to our Cloudinary storage</span>
+
+    router.route('/')
+    .get(catchAsync(campgrounds.index))
+    .post(upload.array('image'), (req, res) => {
+        console.log(req.body, req.files);
+        res.send('it worked!')
+    })
+</code></pre>
+<p>The console.logged array 'req.files' will look like this:</p>
+<pre><code>
+    [
+  {
+    fieldname: 'image',
+    originalname: 'yelpcamp_img1.jpeg',
+    encoding: '7bit',
+    mimetype: 'image/jpeg',
+    path: 'https://res.cloudinary.com/dbru1wghw/image/upload/v1663532053/le79gzq0gp40notk660d.jpg',
+    size: 127225,
+    filename: 'le79gzq0gp40notk660d'
+  },
+  {
+    fieldname: 'image',
+    originalname: 'yelpcamp_img2.jpeg',
+    encoding: '7bit',
+    mimetype: 'image/jpeg',
+    path: 'https://res.cloudinary.com/dbru1wghw/image/upload/v1663532053/oynelfxfbcg2qcryclpf.jpg',
+    size: 169922,
+    filename: 'oynelfxfbcg2qcryclpf'
+  }
+]
+</code></pre>
+<p>Storing image links (Cloudinary paths) to Mongo. First we have to update the model via CampgroundSchema:</p>
+<pre><code>
+    <span class="red">on models/campgrounds.js</span>
+    const CampgroundSchema = new Schema({
+        title: String,
+        <b>images: [
+            {
+                url: String,
+                filename: String
+            }
+        ],</b>
+        price: Number,
+        description: String,
+        location: String,
+        author: {
+            type: Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        reviews: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: 'Review'
+            }
+        ]
+    });
+
+    <span class="red">update route on routes/campgrounds.js</span>
+    router.route('/')
+    .get(catchAsync(campgrounds.index))
+    .post(isLoggedIn, upload.array('image'), validateCampground, catchAsync(campgrounds.createCampground));
+
+    <span class="red">update 'createCampground' function on controllers/campgrounds.js</span>
+    module.exports.createCampground = async (req, res, next) => {
+        const campground = new Campground(req.body.campground);
+        campground.images = req.files.map(f => ({ url: f.path, filename: f.filename }));
+        <span class="red">creates a new object for each item on array 'req.files'</span>
+        campground.author = req.user._id;
+        await campground.save();
+        req.flash('success', 'Successfully made a new campground!');
+        res.redirect(`/campgrounds/${campground._id}`);
+    };
+</code></pre>
+
+<p>Adding Delete Images feature to edit form:</p>
+<pre><code>
+    <span class="red">on edit.ejs</span>
+    < div class="mb-3">
+        <% campground.images.forEach((img, i) => { %>
+            < img src="<%=img.url%>" alt="" class="img-thumbnail">< div class="form-check-inline">
+                < input type="checkbox" id="image-<%=i%>" name="deleteImages[]" value="<%=img.filename%>">< label for="image-<%=i%>"> Delete?< /label>
+            < /div>
+        <% }) %>
+    < /div>
+    <span class="red">each one of the checked values will be pushed into the array that id the value of the deleteImages property on req.body</span>
+
+    <span class="red">on schemas.js</span>
+    module.exports.campgroundSchema = Joi.object({
+        campground: Joi.object({
+            title: Joi.string().required(),
+            price: Joi.number().required().min(0),
+            // image: Joi.string().required(),
+            location: Joi.string().required(),
+            description: Joi.string().required()
+        }).required()<b>,
+        deleteImages: Joi.array()</b>
+    })
+    
+    <span class="red">on controllers/campgrounds.js</span>
+    module.exports.updateCampground = async (req, res) => {
+        const { id } = req.params;
+        const campground = await Campground.findByIdAndUpdate(id, { ...req.body.campground });
+        const imgs = req.files.map(f => ({ url: f.path, filename: f.filename }));
+        campground.images.push(...imgs);
+        await campground.save();
+        <b>if (req.body.deleteImages) {
+            await campground.updateOne({ $pull: { images: { filename: { $in: req.body.deleteImages } } } });
+            console.log(campground);
+        };</b>
+        req.flash('success', 'Successfully updated campground');
+        res.redirect(`/campgrounds/${campground._id}`)
+    };
+    <span class="red">this will delete the images from db</span>
+
+    <span class="red">on controllers/campgrounds.js</span>
+    <b>const { cloudinary } = require("../cloudinary");</b>
+
+    module.exports.updateCampground = async (req, res) => {
+        const { id } = req.params;
+        const campground = await Campground.findByIdAndUpdate(id, { ...req.body.campground });
+        const imgs = req.files.map(f => ({ url: f.path, filename: f.filename }));
+        campground.images.push(...imgs);
+        await campground.save();
+        <b>if (req.body.deleteImages) {
+            for (let filename of req.body.deleteImages) {
+                await cloudinary.uploader.destroy(filename);
+            }
+            await campground.updateOne({ $pull: { images: { filename: { $in: req.body.deleteImages } } } });
+        };</b>
+        req.flash('success', 'Successfully updated campground');
+        res.redirect(`/campgrounds/${campground._id}`)
+    };
+    <span class="red">this will delete images from db AND from Cloudinary storage</span>
+</code></pre>
+
+<p>Adding thumbnails to delete images feature in edit.ejs, using Cloudinary transformation tools. Cloudinary features transformation tools which allow us to get an image with adjusted size, and a bunch of other adjustments.</p>
+<p>https://res.cloudinary.com/dbru1wghw/image/upload/<b>w_200</b>/v1663706682/YelpCamp/ia7yipegv2ompfdo3bqa.png is the path to a 200px-wide version of that image.</p>
+<p>In order to use this feature, we can add logic to our edit.ejs template to split this path and add <b>w_200</b> in the middle. In order to avoid adding too much logic to our template, another option is:</p>
+<pre><code>
+    <span class="red">on models/campgrounds.js</span>
+    <b>const ImageSchema = new Schema({
+        url: String,
+        filename: String
+    })
+
+    ImageSchema.virtual('thumbnail').get(function() {
+        return this.url.replace('/upload', '/upload/w_200');
+    })</b>
+
+    const CampgroundSchema = new Schema({
+        title: String,
+        images: <b>[ImageSchema]</b>,
+        price: Number,
+        description: String,
+        location: String,
+        author: {
+            type: Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        reviews: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: 'Review'
+            }
+        ]
+    });
+    <span class="red">instead of storing a new path for each image, we are creating a virtual (a method) in ImageSchema that will change the original path when it is called to do it.</span>
+
+    <span class="red">on edit.ejs</span>
+    < div class="mb-3">
+        <% campground.images.forEach((img, i) => { %>
+            < img src="<%=img.thumbnail%>" alt="" class="<b>img-thumbnail</b>">< div class="form-check-inline mb-3">
+                < input type="checkbox" id="image-<%=i%>" name="deleteImages[]" value="<%=img.filename%>">< label for="image-<%=i%>"> Delete?< /label>
+            < /div>
+        <% }) %>
+    < /div>
+</code></pre>
+
+<h3>Adding map: Mapbox</h3>
+<p>After signing up for Mapbox, store the Mapbox token on .env file.</p>
+<p>For geocoding, we could make direct API requests to Mapbox API, but instead of that, we are going to use @mapbox/mapbox-sdk node client.</p>
+<pre><code>
+    <span class="red">on .env</span>
+    MAPBOX_TOKEN=pk.eyJ1Ijoidml0b3JqYWd1YXQiLCJhIjoiY2w4YzNhbW11MDMwMjN2bnRtb3I3d3VsZCJ9.puMAG2x0aRCow4aQmACz7A
+
+    <span class="red">on Terminal</span>
+    npm i @mapbox/mapbox-sdk
+
+    <span class="red">on controllers/campgrounds.js</span>
+    const mbxGeocoding = require('@mapbox/mapbox-sdk/services/geocoding');
+    const mapBoxToken = process.env.MAPBOX_TOKEN;
+    const geocoder = mbxGeocoding({ accessToken: mapBoxToken });
+    
+    module.exports.createCampground = async (req, res, next) => {
+        const geoData = await geocoder.forwardGeocode({
+            query: req.body.campground.location,
+            limit: 1
+        }).send();
+        res.send(geoData.body.features[0].geometry.coordinates)
+        <span class="red"></span>geoData.body.features[0].geometry will return a GeoJSON object. we have to format our CampgroundSchema accordingly to the strict parameters of this format:
+
+    <span class="red">on models/campgrounds.js</span>
+    const CampgroundSchema = new Schema({
+        title: String,
+        images: [ImageSchema],
+        <b>geometry: {
+            type: {
+                type: String,
+                enum: ['Point'],
+                required: true
+            },
+            coordinates: {
+                type: [Number],
+                required: true
+            }
+        },</b>
+        price: Number,
+        description: String,
+        location: String,
+        author: {
+            type: Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        reviews: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: 'Review'
+            }
+        ]
+    });
+
+    <span class="red">the final code on controllers/campgrounda.js will look like this:</span>
+    module.exports.createCampground = async (req, res, next) => {
+        <b>const geoData = await geocoder.forwardGeocode({
+            query: req.body.campground.location,
+            limit: 1
+        }).send();</b>
+        const campground = new Campground(req.body.campground);
+        <b>campground.geometry = geoData.body.features[0].geometry;</b>
+        campground.images = req.files.map(f => ({ url: f.path, filename: f.filename }));
+        campground.author = req.user._id;
+        await campground.save();
+        console.log(campground)
+        req.flash('success', 'Successfully made a new campground!');
+        res.redirect(`/campgrounds/${campground._id}`);
+    };
+</code></pre>
+
+<h4>Displaying maps from Mapbox</h4>
+<p>Mapbox's script and css will be integrated in boilerplate.ejs's head, so it can be available in all view pages.</p>
+<pre><code>
+    <span class="red">on boilerplate.ejs</span>
+    < scri pt src='https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.js'>< /script>
+    < link href='https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.css' rel='stylesheet' />
+
+    <span class="red">on show.ejs</span>
+    <span class="red">wherever we want to display the map:</span>
+    < div id='map' style='width: 400px; height: 300px;'>< /div>
+    <span class="red">on the bottom:</span>
+    < scri pt>
+        const mapToken = '<%-process.env.MAPBOX_TOKEN%>';
+    < /script>
+    < scri pt src="/javascripts/showPageMap.js">< /sc ript>
+
+    <span class="red">on public/javascripts/showPageMap.js</span>
+    mapboxgl.accessToken = mapToken;
+    const map = new mapboxgl.Map({
+        container: 'map', 
+        style: 'mapbox://styles/mapbox/streets-v11', 
+        center: [-75, 76], 
+        zoom: 6
+        });
+
+    new mapboxgl.Marker()
+        .setLngLat([-75, 76])
+        .addTo(map) 
+    <span class="red">this will add a Pin to the centered location</span>
 
 
+</code></pre>
 
+<h4>Centering a map on a campground</h4>
+<p>After displaying the map, we can now center the map on the campground location.</p>
+<pre><code>
+    <span class="red">on show.ejs</span>
+    < scri pt>
+        const mapToken = '<%-process.env.MAPBOX_TOKEN%>';
+        <b>const campground = <%- JSON.stringify(campground) %></b>
+    < /script>
+    < scri pt src="/javascripts/showPageMap.js">< /script>
+    
+    <span class="red">on showMapPage.js</span>
+    mapboxgl.accessToken = mapToken;
+    const map = new mapboxgl.Map({
+        container: 'map', 
+        style: 'mapbox://styles/mapbox/streets-v11', 
+        center: <b>campground.geometry.coordinates</b>, 
+        zoom: 6
+        });
+
+    new mapboxgl.Marker()
+        .setLngLat(<b>campground.geometry.coordinates</b>)
+        .addTo(map) 
+</code></pre>
+
+<h4>Adding a popup on Marker</h4>
+<p>This feature adds a customizable popup that toggles when we click on the marker.</p>
+<pre><code>
+    new mapboxgl.Marker()
+    .setLngLat(campground.geometry.coordinates)
+    .setPopup(
+        new mapboxgl.Popup({offset: 25})
+        .setHTML(
+            `< p>${campground.title}< /p>`
+            <span class="red">HTML here</span>
+        )
+    )
+    .addTo(map)
+</code></pre>
+
+<h4>Adding a Cluster Map into index page</h4>
+<p>This feature adds a cluster map showing all maps in a given area on the index page. More at https://docs.mapbox.com/mapbox-gl-js/example/cluster/</p>
+<pre><code>
+    <span class="red">on views/campgrounds/index.ejs</span>
+    < div id="map" style="width: 100%; height: 500px;">< /div>
+
+
+    <span class="red">on public/javascripts/clusterMap.js</span>
+    mapboxgl.accessToken = mapToken;
+    const map = new mapboxgl.Map({
+    container: 'map',
+    <span class="red"> Choose from Mapbox's core styles, or make your own style with Mapbox Studio</span>
+    style: 'mapbox://styles/mapbox/light-v10',
+    center: [-103.5917, 40.6699],
+    zoom: 3
+    });
+    
+    map.on('load', () => {
+    <span class="red"> Add a new source from our GeoJSON data and
+     set the 'cluster' option to true. GL-JS will
+     add the point_count property to your source data.</span>
+    map.addSource('campgrounds', {
+    type: 'geojson',
+    <span class="red"> Point to GeoJSON data. This example visualizes all M1.0+ earthquakes
+    // from 12/22/15 to 1/21/16 as logged by USGS' Earthquake hazards program.</span>
+    data: campgrounds,
+    cluster: true,
+    clusterMaxZoom: 14, <span class="red">// Max zoom to cluster points on</span>
+    clusterRadius: 50 <span class="red"> Radius of each cluster when clustering points (defaults to 50)</span>
+    });
+    
+    map.addLayer({
+    id: 'clusters',
+    type: 'circle',
+    source: 'campgrounds',
+    filter: ['has', 'point_count'],
+    paint: {
+    <span class="red"> Use step expressions (https://docs.mapbox.com/mapbox-gl-js/style-spec/#expressions-step)
+    // with three steps to implement three types of circles:
+    //   * Blue, 20px circles when point count is less than 100
+    //   * Yellow, 30px circles when point count is between 100 and 750
+    //   * Pink, 40px circles when point count is greater than or equal to 750</span>
+    'circle-color': [
+    'step',
+    ['get', 'point_count'],
+    '#51bbd6',
+    10,
+    '#f1f075',
+    30,
+    '#f28cb1'
+    ],
+    'circle-radius': [
+    'step',
+    ['get', 'point_count'],
+    15, <span class="red">change the max limit number of items in a cluster and cluster sizes (px) here</span>
+    10,
+    20,
+    30,
+    25
+    ]
+    }
+    });
+    
+    map.addLayer({
+    id: 'cluster-count',
+    type: 'symbol',
+    source: 'campgrounds',
+    filter: ['has', 'point_count'],
+    layout: {
+    'text-field': '{point_count_abbreviated}',
+    'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+    'text-size': 12
+    }
+    });
+    
+    map.addLayer({
+    id: 'unclustered-point',
+    type: 'circle',
+    source: 'campgrounds',
+    filter: ['!', ['has', 'point_count']],
+    paint: {
+    'circle-color': '#11b4da',
+    'circle-radius': 4,
+    'circle-stroke-width': 1,
+    'circle-stroke-color': '#fff'
+    }
+    });
+    
+    <span class="red">// inspect a cluster on click</span>
+    map.on('click', 'clusters', (e) => {
+    const features = map.queryRenderedFeatures(e.point, {
+    layers: ['clusters']
+    });
+    const clusterId = features[0].properties.cluster_id;
+    map.getSource('campgrounds').getClusterExpansionZoom(
+    clusterId,
+    (err, zoom) => {
+    if (err) return;
+    
+    map.easeTo({
+    center: features[0].geometry.coordinates,
+    zoom: zoom
+    });
+    }
+    );
+    });
+    
+    <span class="red">// When a click event occurs on a feature in
+    // the unclustered-point layer, open a popup at
+    // the location of the feature, with
+    // description HTML from its properties.</span>
+    map.on('click', 'unclustered-point', (e) => {
+    const coordinates = e.features[0].geometry.coordinates.slice();
+    const mag = e.features[0].properties.mag;
+    const tsunami =
+    e.features[0].properties.tsunami === 1 ? 'yes' : 'no';
+    
+    <span class="red">// Ensure that if the map is zoomed out such that
+    // multiple copies of the feature are visible, the
+    // popup appears over the copy being pointed to.</span>
+    while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+    coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+    }
+    
+    new mapboxgl.Popup()
+    .setLngLat(coordinates)
+    .setHTML(
+    `< h6>Campground< /h6>` <span class="red">html for popup here</span>
+    )
+    .addTo(map);
+    });
+    
+    map.on('mouseenter', 'clusters', () => {
+    map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', 'clusters', () => {
+    map.getCanvas().style.cursor = '';
+    });
+    });
+</code></pre>
+
+<p>In order to allow Mapbox to show each campground's name and link on its specific point on the map, we have to provide an object with the properties "geometry" (object campground already has it) and "properties" (in which Mapbox will look for values to show in the popups, for example. So, we will add a virtual to the campground schema, so that "properties" stays available when needed.</p>
+<p>By default, Mongoose does not include virtuals when you convert a document to JSON. For example, if you pass a document to Express' res.json() function, virtuals will not be included by default. To include virtuals in res.json(), you need to set the toJSON schema option to { virtuals: true }. We are stringifying our campground object on views/campgrounds/index.ejs, so we'll have to do it.</p>
+
+<pre><code>
+    <span class="red">in models/campgrounds.js</span>
+    <b>const opts = { toJSON: { virtuals: true } };</b>
+
+    const CampgroundSchema = new Schema({
+        title: String,
+        images: [ImageSchema],
+        geometry: {
+            type: {
+                type: String,
+                enum: ['Point'],
+                required: true
+            },
+            coordinates: {
+                type: [Number],
+                required: true
+            }
+        },
+        price: Number,
+        description: String,
+        location: String,
+        author: {
+            type: Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        reviews: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: 'Review'
+            }
+        ]
+    }<b>, opts</b>);
+    
+    <b>CampgroundSchema.virtual('properties.popUpMarkup').get(function() {
+        return `
+        < a href="/campgrounds/${this._id}">${this.title}< /a>
+        < p>${this.description.substring(0,60)}...< /p>
+        `
+    });</b>
+
+    <span class="red">on public/javascripts/clusterMap.js</span>
+    map.on('click', 'unclustered-point', (e) => {
+        const coordinates = e.features[0].geometry.coordinates.slice();
+        const text = e.features[0].properties.popUpMarkup; <span class="red">here the virtual is being called</span>
+        
+        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+        coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+        }
+         
+        new mapboxgl.Popup()
+        .setLngLat(coordinates)
+        .setHTML(
+        text <span>this will accept html; in our case the html is written as the value of e.features[0].properties.popUpMarkup</span>
+        )
+        .addTo(map);
+        });
+</code></pre>
+
+<p>We can also add navigation controls to the map, by adding the following method:</p>
+<pre><code>
+    map.addControl(new mapboxgl.NavigationControl());
+</code></pre>
+
+<h3>Security issues</h3>
+<h4>Mongo injection</h4>
+<p>Mongo injection refers to the situation when a user uses the queries and req.body to <b>inject</b> malicious code into the app. In order to protect the app from this type of attack, we can make use of a package called <b>express-mongo-sanitize</b>, which can prevent some characters (like ; , &) to be submitted as part of query strings or req.body.</p>
 
 
 <script src="app.js"></script>
